@@ -9,6 +9,19 @@ from pathlib import Path
 
 from fastmcp import FastMCP, Context
 import modal
+import inngest
+
+# Try importing serve from standard location, fallback to direct module if needed 
+# (Inngest 0.5.15+ seems to use fast_api.py)
+try:
+    from inngest.fastapi import serve as inngest_serve
+except ImportError:
+    try:
+        from inngest.fast_api import serve as inngest_serve
+    except ImportError:
+        # Fallback for older versions or if structure differs
+        import inngest.fastapi as inngest_fastapi
+        inngest_serve = inngest_fastapi.serve
 
 import os
 
@@ -19,6 +32,10 @@ RISK_THRESHOLD = 70
 
 # Initialize FastMCP Server
 mcp = FastMCP("ATLAS_Hub")
+
+# Initialize FastAPI
+from fastapi import FastAPI, Request
+app = FastAPI(title="ATLAS Governance Gateway")
 
 # Setup Logging
 logging.basicConfig(level=logging.INFO)
@@ -99,12 +116,12 @@ def call_slm_risk_engine(intent: str, context: Dict[str, Any]) -> Dict[str, Any]
         # Run remote inference
         # modal functions are async, but .call() is synchronous blocking
         # We use a 10s timeout to handle cold starts or failures
-        start_time = time.time()
-        try:
-            # We can't easily enforce timeout on .call() without async primitives or wrapping
-            # But Modal functions have their own timeouts. 
-            # Ideally we'd use f.remote.aio() if we were fully async here, but for now we stick to blocking.
-            # To strictly enforce 10s client-side, we'd need a thread/process wrapper or async.
+        return {"decision": decision, "risk_score": risk_score, "rationale": rationale}
+
+    except Exception as e:
+        logger.error(f"Modal SLM Call Failed: {e}")
+        # Fail safe -> Manual Review
+        return {"decision": "MANUAL_REVIEW", "risk_score": 100, "rationale": f"System Error/Timeout: {str(e)}"}
 # --- Governance Logic (Inngest Powered) ---
 
 async def governance_check(intent: str, context: Any, tool_name: str) -> str:
@@ -189,7 +206,7 @@ async def root():
 
 # Serve Inngest
 # For production, we must provide the signing_key to verify requests from Inngest Cloud.
-inngest.fastapi.serve(
+inngest_serve(
     app, 
     inngest_client, 
     [handle_governance],

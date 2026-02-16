@@ -3,8 +3,9 @@ modal
 langchain
 langchain-ollama
 langchain-core
-inngest
+inngest>=0.5.15
 fastapi
 uvicorn
 python-multipart
 openai
+# Force Rebuild: Refresh dependencies

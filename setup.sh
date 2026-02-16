@@ -34,53 +34,59 @@ echo "------------------------------------------"
 echo "Inngest Configuration"
 echo "------------------------------------------"
 echo "To use Inngest Cloud (Production), you need your Event Key and Signing Key."
-echo "Press Enter to skip if using local dev server (default)."
-read -s -p "Inngest Event Key: " INNGEST_EVENT
-echo ""
-read -s -p "Inngest Signing Key: " INNGEST_SIGNING
-echo ""
+echo "Defaults provided from user request."
+# User provided keys
+DEFAULT_EVENT_KEY="e-aFf4PSmXY2ifCO0T-iYklR4B-Ptow_4ZacdCWfvgunDv4HjDR3o5JvFEfZ38KfQSCBQkzS_mKe9LTmPj9CUw"
+DEFAULT_SIGNING_KEY="0V4B0RP-lCiyZFkuqLmqIjfhZjyBncXBO1flP41DPX7DRiBFR0-1ijapx5Qe7bsGH8IYp_l_Pr8-q11luIx-pw"
+
+read -p "Inngest Event Key [default: provided]: " INNGEST_EVENT
+INNGEST_EVENT=${INNGEST_EVENT:-$DEFAULT_EVENT_KEY}
+
+read -p "Inngest Signing Key [default: provided]: " INNGEST_SIGNING
+INNGEST_SIGNING=${INNGEST_SIGNING:-$DEFAULT_SIGNING_KEY}
 
 if [ -n "$INNGEST_EVENT" ]; then
     INNGEST_VARS="INNGEST_EVENT_KEY=$INNGEST_EVENT\nINNGEST_SIGNING_KEY=$INNGEST_SIGNING"
     echo "-> Configured for Inngest Cloud."
 else
+    # Should not happen with defaults, but good fallback
     INNGEST_VARS="# INNGEST_EVENT_KEY (Set for Prod)\n# INNGEST_SIGNING_KEY (Set for Prod)"
     echo "-> Configured for Local Inngest Dev Server."
 fi
 echo ""
 
-# 4. Create .env file for Docker
+# 4. Modal Credentials
+echo "------------------------------------------"
+echo "Modal Credentials"
+echo "------------------------------------------"
+# User provided Modal Keys
+DEFAULT_MODAL_TOKEN="ak-sPQFxWlQYiaThgPm8LNvpB"
+DEFAULT_MODAL_SECRET="as-tmPvssFWxST5KwD5b2Wna5"
+
+read -p "Modal Token ID [default: provided]: " MODAL_TOKEN_ID
+MODAL_TOKEN_ID=${MODAL_TOKEN_ID:-$DEFAULT_MODAL_TOKEN}
+
+read -s -p "Modal Token Secret [default: provided]: " MODAL_TOKEN_SECRET
+MODAL_TOKEN_SECRET=${MODAL_TOKEN_SECRET:-$DEFAULT_MODAL_SECRET}
+echo ""
+
+# 5. Create .env file for Docker
 echo "Creating .env file..."
-echo -e "MODAL_FUNCTION_NAME=$MODAL_FUNC\n$AI_ENV_VAR\n$INNGEST_VARS" > .env
+echo -e "MODAL_FUNCTION_NAME=$MODAL_FUNC\nMODAL_TOKEN_ID=$MODAL_TOKEN_ID\nMODAL_TOKEN_SECRET=$MODAL_TOKEN_SECRET\n$AI_ENV_VAR\n$INNGEST_VARS" > .env
 echo ".env file created."
 echo ""
 
-# 4. Docker Build & Run
+# 6. Docker Build & Run
 read -p "Do you want to build and run the Docker container now? [y/N]: " RUN_DOCKER
 if [[ "$RUN_DOCKER" =~ ^[Yy]$ ]]; then
-    echo "Building Docker image..."
-    docker build -t atlas-gateway .
+    echo "Building Docker image (forcing fresh install)..."
+    docker build --no-cache -t atlas-gateway .
     
     echo "Running Docker container..."
-    # Note: For Modal to work inside Docker, we need to pass credentials.
-    # We assume 'modal token new' has been run locally or tokens are passed.
-    # For this script, we'll ask for them if not found in env.
-    
-    if [ -z "$MODAL_TOKEN_ID" ]; then
-        echo "⚠️  Modal credentials not detected in environment."
-        echo "To run inside Docker, we need your Modal credentials."
-        read -s -p "Modal Token ID: " M_ID
-        echo ""
-        read -s -p "Modal Token Secret: " M_SECRET
-        echo ""
-        MODAL_ARGS="-e MODAL_TOKEN_ID=$M_ID -e MODAL_TOKEN_SECRET=$M_SECRET"
-    else
-        MODAL_ARGS="-e MODAL_TOKEN_ID=$MODAL_TOKEN_ID -e MODAL_TOKEN_SECRET=$MODAL_TOKEN_SECRET"
-    fi
-    
-    docker run -it --rm --env-file .env $MODAL_ARGS atlas-gateway
+    # Connect with env file which includes all tokens
+    docker run -it --rm --env-file .env atlas-gateway
 else
     echo "Setup complete. To run manually:"
     echo "docker build -t atlas-gateway ."
-    echo "docker run --env-file .env -e MODAL_TOKEN_ID=... -e MODAL_TOKEN_SECRET=... atlas-gateway"
+    echo "docker run --env-file .env atlas-gateway"
 fi
