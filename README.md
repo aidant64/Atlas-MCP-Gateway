@@ -110,6 +110,66 @@ We included a script `test_handshake.py` that simulates the entire flow without 
     * Script waits... then sends an **Approval** signal to `/webhook/approval`.
     * Workflow completes.
 
+## 🔄 Detailed Governance Procedure Call
+
+The following sequence occurs when a high-risk tool is invoked.
+
+### 1. Initial Tool Request (Agent -> Gateway)
+
+**Endpoint**: `SSE /mcp/sse` (Streamed)
+
+* **Request** (JSON-RPC):
+
+    ```json
+    {
+      "method": "tools/call",
+      "params": {
+        "name": "request_payment_extension",
+        "arguments": { "beneficiary_id": "BEN-123", "reason": "Hardship" }
+      }
+    }
+    ```
+
+* **Gateway Response**:
+
+    ```text
+    PENDING REVIEW (Ref: evt_48f1fb4b). Action queued subject to governance checks.
+    ```
+
+### 2. Risk Assessment (Inngest -> Modal)
+
+**Endpoint**: `Modal.com (Inference API)`
+
+* **Input**: Tool name and arguments.
+* **Assessment Result**:
+
+    ```json
+    { "risk_score": 85, "classification": "HIGH_RISK", "action": "PAUSE" }
+    ```
+
+### 3. Human Approval (Sarah -> Gateway)
+
+**Endpoint**: `POST /webhook/approval`
+
+* **Request**:
+
+    ```json
+    {
+      "decision": "APPROVED",
+      "event_id": "evt_48f1fb4b"
+    }
+    ```
+
+* **Response**:
+
+    ```json
+    { "status": "Signal Sent", "decision": "APPROVED" }
+    ```
+
+### 4. Workflow Resolution (Inngest)
+
+The `atlas/sarah.decision` event resumes the workflow. The final authorization is logged in the Inngest dashboard.
+
 ---
 
 ## 📂 Project Structure
