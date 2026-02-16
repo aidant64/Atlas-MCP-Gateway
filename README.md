@@ -18,6 +18,31 @@ The **ATLAS Governance Gateway** is a centralized hub that intercepts AI Agent t
 
 ## 🛠️ Architecture
 
+```mermaid
+sequenceDiagram
+    participant Agent as AI Agent (MCP Client)
+    participant GW as Governance Gateway (FastAPI)
+    participant Modal as Atlas Brain (Modal Evaluation)
+    participant Inngest as Inngest Workflow
+    participant Human as Sarah (Human-in-the-Loop)
+
+    Agent->>GW: Call Tool (e.g. request_payment_extension)
+    GW->>Inngest: Trigger Governance Event
+    GW-->>Agent: Returns "PENDING REVIEW"
+    
+    Inngest->>Modal: Evaluate Risk (EU AI Act)
+    Modal-->>Inngest: Risk Score (0-100)
+
+    alt Risk Score < 70
+        Inngest->>Inngest: Auto-Approve Action
+    else Risk Score >= 70
+        Inngest->>Inngest: PAUSE & Wait for Human
+        Human->>GW: POST /webhook/approval (APPROVED)
+        GW->>Inngest: Send Approval Event
+        Inngest->>Inngest: Resume & Finalize
+    end
+```
+
 The system consists of three main components:
 
 1. **Gateway (`gateway.py`)**: A **FastAPI** application that serves as the entry point.
@@ -110,6 +135,20 @@ We included a script `test_handshake.py` that simulates the entire flow without 
     * Script waits... then sends an **Approval** signal to `/webhook/approval`.
     * Workflow completes.
 
+## 🤖 AI Agent Prompt Instructions
+
+To ensure your AI Agent correctly uses the Governance Gateway, include the following instructions in the Agent's **System Prompt**:
+
+> ### 🛑 Governance Protocol
+>
+> 1. This environment is governed by the **ATLAS Governance Gateway**.
+> 2. When you call a payment or high-risk tool, the gateway may return a message starting with `PENDING REVIEW (Ref: evt_...)`.
+> 3. **DO NOT** assume the action failed.
+> 4. **DO** inform the user that the request has been queued for human governance review and provide the Reference ID.
+> 5. **DO NOT** retry the call immediately; wait for the system to process the background workflow.
+
+---
+
 ## 🔄 Detailed Governance Procedure Call
 
 The following sequence occurs when a high-risk tool is invoked.
@@ -147,26 +186,29 @@ The following sequence occurs when a high-risk tool is invoked.
     { "risk_score": 85, "classification": "HIGH_RISK", "action": "PAUSE" }
     ```
 
-### 3. Human Approval (Sarah -> Gateway)
+### 3. Case A: HITL Required (Risk >= 70)
 
-**Endpoint**: `POST /webhook/approval`
+If the **Atlas Brain** determines the action is high-risk, a notification is sent to the human reviewer (**Sarah**).
 
-* **Request**:
-
-    ```json
-    {
-      "decision": "APPROVED",
-      "event_id": "evt_48f1fb4b"
-    }
-    ```
-
-* **Response**:
+* **Sarah's Workflow**:
+    1. Sarah receives a notification via Inngest/Webhook.
+    2. Sarah reviews the `reason` and `beneficiary_id`.
+    3. Sarah approves: `POST /webhook/approval`
 
     ```json
-    { "status": "Signal Sent", "decision": "APPROVED" }
+    { "decision": "APPROVED", "event_id": "evt_48f1fb4b" }
     ```
 
-### 4. Workflow Resolution (Inngest)
+* **Workflow Result**: Workflow resumes and marks the tool execution as `AUTHORIZED`.
+
+### 4. Case B: Auto-Approval (Risk < 70)
+
+If the action is deemed low-risk (e.g., standard status check or well-documented low-value extension), the system skips human intervention.
+
+* **Workflow Result**: The workflow proceeds immediately to completion without waiting for an external signal.
+* **Audit Log**: "Auto-approved based on Risk Score [X] per Article 14 Compliance."
+
+### 5. Workflow Resolution (Inngest)
 
 The `atlas/sarah.decision` event resumes the workflow. The final authorization is logged in the Inngest dashboard.
 
