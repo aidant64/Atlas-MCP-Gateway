@@ -116,9 +116,44 @@ This is the client interface. In a real-world production setup, this logic would
 
 ---
 
-## 📂 Project Structure
+## 🤖 How to Setup Your Agent AI
 
-* `gateway.py`: Core logic, MCP server, Gatekeeper, and Modal wrapper.
-* `agent.py`: LangChain-based agent configured to use the Gateway tools.
-* `test_scenario.py`: End-to-end integration test.
-* `audit_log.jsonl`: Local persistent log of all governance decisions.
+To use this Gateway for escalation, your "Agent AI" needs to connect to it as an **MCP Client** or use the LangChain integration provided.
+
+### 1. Connecting an External Agent (custom)
+
+If you have an existing agent, configured it to use the tools exposed by the Gateway:
+
+* **Tools Exposed**: `check_payment_status`, `request_payment_extension`, `modify_welfare_record`.
+* **Escalation Handling**:
+  * The Agent must be instructed (via System Prompt) to handle `PAUSED` or `DENIED` responses.
+  * **Example Prompt**:
+        > "If a tool execution returns 'ACTION PAUSED' or 'ESCALATED', do not retry immediately. Inform the user that the request is under review by a human supervisor."
+
+### 2. Using Claude Desktop (as Agent)
+
+You can use Claude as your Agent AI interface:
+
+1. Add the Gateway to your `claude_desktop_config.json`:
+
+    ```json
+    {
+      "mcpServers": {
+        "atlas-gateway": {
+          "command": "python3",
+          "args": ["/absolute/path/to/gateway.py"]
+        }
+      }
+    }
+    ```
+
+2. Ask Claude: *"Can you request a payment extension for beneficiary 123?"*
+3. Claude will call the tool, the Gateway will intercept and potentially pause it, and Claude will report the status to you.
+
+### 3. Using the Docker Container
+
+Run the container and expose the MCP server:
+
+* **Build**: `docker build -t atlas-gateway .`
+* **Run**: `docker run -it --env-file .env atlas-gateway`
+* **Interactive Setup**: Run `./setup.sh` to configure and launch automatically.

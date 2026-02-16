@@ -10,8 +10,10 @@ from pathlib import Path
 from fastmcp import FastMCP, Context
 import modal
 
+import os
+
 # Configuration
-MODAL_FUNCTION_NAME = "nislam-mics/ATLAS-NIST-Measure"
+MODAL_FUNCTION_NAME = os.getenv("MODAL_FUNCTION_NAME", "nislam-mics/ATLAS-NIST-Measure")
 AUDIT_LOG_FILE = "audit_log.jsonl"
 RISK_THRESHOLD = 70
 
