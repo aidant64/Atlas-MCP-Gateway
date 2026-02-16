@@ -213,10 +213,10 @@ async def root():
 # Mount FastMCP server
 # This exposes the MCP tools at /mcp/sse and /mcp/messages
 try:
-    # fastmcp.http_app is likely a property or method returning a Starlette app
-    mcp_app = mcp.http_app() if callable(mcp.http_app) else mcp.http_app
+    # fastmcp.http_app returns a Starlette app. We force SSE transport.
+    mcp_app = mcp.http_app(transport="sse")
     app.mount("/mcp", mcp_app)
-    logger.info("Mounted FastMCP at /mcp")
+    logger.info("Mounted FastMCP (SSE) at /mcp")
 except Exception as e:
     logger.error(f"Failed to mount FastMCP: {e}")
 
