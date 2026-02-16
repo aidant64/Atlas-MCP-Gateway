@@ -1,159 +1,82 @@
-# ATLAS Governance Gateway
+# ATLAS Governance Gateway (Phase 2)
 
-The **ATLAS Governance Gateway** is an intelligent middleware designed to oversee AI agent actions in sensitive domains (like welfare administration). It intercepts tool calls, evaluates potential risks using a deployed Small Language Model (SLM) on Modal.com, and enforces "Human-in-the-Loop" (HITL) protocols for high-risk actions.
+**Inngest-Powered Governance Architecture**
+
+The **ATLAS Governance Gateway** is a centralized hub that intercepts AI Agent tool calls, evaluates potential risks using a Modal.com SLM, and manages "Human-in-the-Loop" (HITL) escalations via durable **Inngest** workflows.
+
+> **Logic Attribution**: The governance logic and dataset design are attributed to **Anna Ko <anna_ko@berkeley.edu>** (UC Berkeley). This implementation strictly follows the "approve -> auto_approve" deterministic flow for low-risk actions per project v3.0 findings.
 
 ## 🚀 Key Features
 
-* **Risk Evaluation**: Real-time checking of agent intent against EU AI Act compliance standards via `atlas-welfare-v1` on Modal.
-* **Gatekeeper Middleware**: Blocks or pauses high-risk actions before execution.
-* **Audit Logging**: Immutable JSONL logs (`audit_log.jsonl`) for transparency.
-* **Hybrid AI Support**: Works with OpenAI (GPT-4) or Local LLMs (Ollama/Mistral) for the agent interface.
+* **Durable Governance**: Uses **Inngest** to manage long-running human review workflows that survive server restarts.
+* **FastMCP + FastAPI**: Exposes MCP tools via a robust web server.
+* **Risk Evaluation**: Real-time checking against EU AI Act standards via `atlas-welfare-v1` on Modal.
+* **Compliance**: Enforces Article 14 by pausing high-risk actions until human approval is received.
 
 ---
 
-## 🛠️ Prerequisites
+## 🛠️ Architecture
 
-* **Python 3.10+**
-* **Modal Account**: You need access to the `atlas-welfare-v1` deployment.
-  * Run `modal token new` to authenticate.
-* **Ollama (Optional)**: For running the agent locally without OpenAI costs.
-  * Recommended model: `mistral-nemo` (`ollama pull mistral-nemo`).
-* **OpenAI API Key (Optional)**: If you prefer using GPT-4 for the agent.
+1. **Gateway (`gateway.py`)**: A **FastAPI** application that:
+    * Hosts the **FastMCP** server.
+    * Serves the **Inngest** endpoint (`/api/inngest`).
+    * Receives **Webhooks** from the Sarah Portal (`/webhook/approval`).
+2. **Workflows (`workflows.py`)**: Defines the Inngest functions.
+    * `handle_governance`: Assesses risk -> Auto-approves LOW risk -> Waits for event `atlas/sarah.decision` for HIGH risk.
+3. **Agent (`agent.py`)**:
+    * configured to handle "PENDING REVIEW" responses gracefully.
 
 ---
 
 ## 📦 Installation
 
-1. **Clone the repository**:
-
-    ```bash
-    git clone <your-repo-url>
-    cd MCP
-    ```
-
-2. **Install Dependencies**:
+1. **Install Dependencies**:
 
     ```bash
     pip install -r requirements.txt
     ```
 
-3. **Setup Environment**:
-    * **Modal**: Ensure you are logged in.
+2. **Setup Environment**:
+    Create a `.env` file for **Inngest Cloud** (Production):
 
-        ```bash
-        modal token new
-        ```
+    ```bash
+    export OPENAI_API_KEY="sk-..."       
+    export MODAL_TOKEN_ID="..."          
+    export MODAL_TOKEN_SECRET="..."
+    
+    # Required for Inngest Cloud
+    export INNGEST_EVENT_KEY="cn-..."    
+    export INNGEST_SIGNING_KEY="sign-..." 
+    ```
 
-    * **OpenAI (Optional)**:
-
-        ```bash
-        export OPENAI_API_KEY="sk-..."
-        ```
+3. **Start the Gateway**:
+    * **Production**: Just run `python gateway.py`. The app will connect to Inngest Cloud.
+    * **Local Dev**: Run `npx inngest-cli@latest dev` in a separate terminal, then run `python gateway.py`.
 
 ---
 
-## 🧪 How to Test
+## 🧪 How to Test (End-to-End Handshake)
 
-We include a `test_scenario.py` that simulates a user ("Alex") asking for a payment extension—a high-risk action that triggers the governance protocols.
+We have a script `test_handshake.py` that simulates the full asynchronous flow:
 
-### Option 1: Using Local LLM (Ollama)
+1. **Agent Request**: Simulates calling `request_payment_extension`.
+2. **Gateway Response**: Returns `PENDING REVIEW` (Action Paused).
+3. **Governance Workflow**: Inngest triggers, checks risk (High), and waits.
+4. **Sarah's Approval**: The script posts to `/webhook/approval`.
+5. **Completion**: The workflow completes (check Inngest dashboard).
 
-*Best for cost-free testing.*
+Run it:
 
-1. Ensure Ollama is running (`ollama serve`).
-2. Unset the OpenAI key to force fallback:
-
-    ```bash
-    export OPENAI_API_KEY=""
-    python3.10 test_scenario.py
-    ```
-
-### Option 2: Using OpenAI
-
-1. Set your API Key:
-
-    ```bash
-    export OPENAI_API_KEY="sk-..."
-    python3.10 test_scenario.py
-    ```
-
-### Expected Output
-
-You should see:
-
-1. The Agent receives the request.
-2. The **Gateway intercepts** the tool call.
-3. The Gateway calls **Modal** to assess risk.
-4. The action is **PAUSED** and queued for review (Risk Score > 70).
-5. An entry is written to `audit_log.jsonl`.
+```bash
+# Ensure gateway.py is running in another terminal!
+python test_handshake.py
+```
 
 ---
 
-## 🚢 Deployment & Production
+## 📂 Project Structure
 
-### 1. The Governance Gateway (`gateway.py`)
-
-This is a **FastMCP** server. It acts as the central hub.
-
-* **Deployment Target**:
-  * **Container/Docker**: Containerize the gateway and deploy to **AWS ECS**, **Google Cloud Run**, or **Fly.io**.
-  * **SSE Mode**: If clients connect via HTTP (SSE), deploy as a web service.
-  * **Stdio Mode**: If used locally by an MCP client (like Claude Desktop), it runs as a subprocess.
-* **Command**:
-
-    ```bash
-    # Standard MCP execution
-    python gateway.py
-    ```
-
-### 2. The Risk Engine (Modal)
-
-The brain (`atlas-welfare-v1`) is already deployed on **Modal.com**. Use `modal deploy` in the `../atlas` directory to update it.
-
-### 3. The Agent (`agent.py`)
-
-This is the client interface. In a real-world production setup, this logic would run inside your application backend (e.g., a FastAPI service or a chat server) that connects to the MCP Gateway.
-
----
-
-## 🤖 How to Setup Your Agent AI
-
-To use this Gateway for escalation, your "Agent AI" needs to connect to it as an **MCP Client** or use the LangChain integration provided.
-
-### 1. Connecting an External Agent (custom)
-
-If you have an existing agent, configured it to use the tools exposed by the Gateway:
-
-* **Tools Exposed**: `check_payment_status`, `request_payment_extension`, `modify_welfare_record`.
-* **Escalation Handling**:
-  * The Agent must be instructed (via System Prompt) to handle `PAUSED` or `DENIED` responses.
-  * **Example Prompt**:
-        > "If a tool execution returns 'ACTION PAUSED' or 'ESCALATED', do not retry immediately. Inform the user that the request is under review by a human supervisor."
-
-### 2. Using Claude Desktop (as Agent)
-
-You can use Claude as your Agent AI interface:
-
-1. Add the Gateway to your `claude_desktop_config.json`:
-
-    ```json
-    {
-      "mcpServers": {
-        "atlas-gateway": {
-          "command": "python3",
-          "args": ["/absolute/path/to/gateway.py"]
-        }
-      }
-    }
-    ```
-
-2. Ask Claude: *"Can you request a payment extension for beneficiary 123?"*
-3. Claude will call the tool, the Gateway will intercept and potentially pause it, and Claude will report the status to you.
-
-### 3. Using the Docker Container
-
-Run the container and expose the MCP server:
-
-* **Build**: `docker build -t atlas-gateway .`
-* **Run**: `docker run -it --env-file .env atlas-gateway`
-* **Interactive Setup**: Run `./setup.sh` to configure and launch automatically.
+* `gateway.py`: FastAPI app with FastMCP and Inngest.
+* `workflows.py`: Inngest workflow definitions.
+* `agent.py`: LangChain Agent.
+* `test_handshake.py`: Verification script.

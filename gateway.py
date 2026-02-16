@@ -105,157 +105,75 @@ def call_slm_risk_engine(intent: str, context: Dict[str, Any]) -> Dict[str, Any]
             # But Modal functions have their own timeouts. 
             # Ideally we'd use f.remote.aio() if we were fully async here, but for now we stick to blocking.
             # To strictly enforce 10s client-side, we'd need a thread/process wrapper or async.
-            # For simplicity in this demo, we assume the function responds or we catch generic errors.
-            result = f.call(request_payload)
-            duration = time.time() - start_time
-            logger.info(f"Modal call took {duration:.2f}s")
-            
-        except Exception as e:
-            if "Timeout" in str(e): # Rudimentary check, Modal might raise specific errors
-                 raise TimeoutError("Modal call timed out")
-            raise e
+# --- Governance Logic (Inngest Powered) ---
 
-        if isinstance(result, str):
-             response_text = result
-        else:
-             response_text = result.get("generated_text", "")
-        logger.info(f"SLM Response: {response_text}")
-
-        # Parse Logic (heuristic based on model output text)
-        # The model is trained to output risk assessments. 
-        # We need to parse "Risk Score: X" or "Decision: ESCALATE"
-        
-        risk_score = 0
-        decision = "APPROVED"
-        rationale = response_text
-
-        if "high risk" in response_text.lower() or "escalate" in response_text.lower():
-            decision = "ESCALATE"
-            risk_score = 85 # Default high if not parsed
-        
-        # Try to find explicit score if present (e.g. "Risk Score: 85")
-        import re
-        score_match = re.search(r"Risk Score:\s*(\d+)", response_text, re.IGNORECASE)
-        if score_match:
-            risk_score = int(score_match.group(1))
-
-        if risk_score > RISK_THRESHOLD:
-            decision = "ESCALATE"
-
-        return {"decision": decision, "risk_score": risk_score, "rationale": rationale}
-
-    except Exception as e:
-        logger.error(f"Modal SLM Call Failed: {e}")
-        # Fail safe -> Manual Review
-        return {"decision": "MANUAL_REVIEW", "risk_score": 100, "rationale": f"System Error/Timeout: {str(e)}"}
-
-
-async def gatekeeper(intent: str, context: Dict[str, Any], tool_name: str, arguments: Dict[str, Any], ctx: Context = None) -> str:
+async def governance_check(intent: str, context: Any, tool_name: str) -> str:
     """
-    Middleware that evaluates intent vs. policy using the SLM.
-    Returns the tool output if approved, or a 'PAUSED' message if escalated.
+    Triggers an Inngest workflow for governance.
+    Returns "APPROVED" if low risk (auto-approved),
+    or "PENDING: <event_id>" if high risk (waiting for human).
     """
-    logger.info(f"Gatekeeper evaluating: {intent}")
+    event_id = f"evt_{uuid.uuid4().hex[:8]}"
     
-    # 1. Evaluate Risk
-    slm_result = call_slm_risk_engine(intent, context)
-    risk_score = slm_result.get("risk_score", 0)
-    decision = slm_result.get("decision", "ESCALATE")
-    
-    audit_entry = {
-        "timestamp": datetime.now().isoformat(),
-        "agent_intent": intent,
-        "user_context": context,
-        "tool_name": tool_name,
-        "arguments": arguments,
-        "slm_rationale": slm_result.get("rationale"),
-        "risk_score": risk_score,
-        "slm_decision": decision,
-        "final_outcome": "",
-    }
-
-    # 2. Threshold Logic
-    if decision == "ESCALATE" or risk_score > RISK_THRESHOLD:
-        # 3. Sarah's Intervention (Queue)
-        action = PendingAction(intent, context, tool_name, arguments)
-        pending_actions[action.id] = action
-        
-        audit_entry["final_outcome"] = "PAUSED_FOR_REVIEW"
-        audit_entry["action_id"] = action.id
-        log_audit(audit_entry)
-
-        if ctx:
-            ctx.info(f"Action paused. Risk Score: {risk_score}. Queued as {action.id}")
-
-        return (
-            f"⚠️ ACTION PAUSED: This request has been flagged (Risk Score: {risk_score}) "
-            f"and escalated to Sarah (Case Officer) for review per Article 14 of the EU AI Act. "
-            f"Reference ID: {action.id}. Please inform Alex."
+    # Send event to Inngest
+    await inngest_client.send(
+        inngest.Event(
+            name="atlas/tool.execution_requested",
+            data={
+                "intent": intent,
+                "context": context,
+                "tool_name": tool_name,
+                "event_id": event_id
+            },
+            id=event_id
         )
-
-    # 4. Approved Execution (Mock execution logic here since we wrap the tool)
-    audit_entry["final_outcome"] = "EXECUTED"
-    log_audit(audit_entry)
+    )
     
-    return "APPROVED"
-
+    # For Phase 2, we assume a "Checking..." state.
+    # ideally, we would wait for the result if it's fast (low risk).
+    # But Inngest is async.
+    # To keep it simple: We tell the Agent to expect a delay.
+    # The Inngest workflow will log the final outcome.
+    
+    # We can do a quick pre-check or just return PENDING.
+    # Let's return a special string that the Agent knows how to handle.
+    return f"PENDING REVIEW (Ref: {event_id}). This action has been queued for execution subject to governance checks."
 
 # --- Tool Definitions ---
 
 async def check_payment_status_logic(beneficiary_id: str) -> str:
     """Core logic for checking payment status."""
-    # Intent: READ (Low Risk)
-    intent = "check_payment_status"
-    user_context = f"User querying payment status for {beneficiary_id}"
+    # READ operation, usually low risk, but let's pass it through governance for audit
+    status = await governance_check("check_payment_status", {"beneficiary_id": beneficiary_id}, "check_payment_status")
+    if "PENDING" in status:
+         return status
     
-    # Gatekeeper Check
-    approval = await gatekeeper(intent, user_context, "check_payment_status", {"beneficiary_id": beneficiary_id})
-    
-    if approval != "APPROVED":
-        return approval
-    
-    # Execute Logic (Mock Database Read)
-    return f"Payment status for {beneficiary_id}: PROCESSED. Amount: €450. Date: 2023-10-25."
+    # If immediately approved (future optimization), we would proceed.
+    # For now, let's simulate that READ operations are safe and don't block.
+    return f"Payment Status for {beneficiary_id}: Active. Last payment: $500 on 2023-10-01."
+
+async def request_payment_extension_logic(beneficiary_id: str, reason: str) -> str:
+    """Core logic for requesting payment extension."""
+    # WRITE operation - triggers strict governance
+    status = await governance_check("request_payment_extension", {"beneficiary_id": beneficiary_id, "reason": reason}, "request_payment_extension")
+    return status
+
+async def modify_welfare_record_logic(beneficiary_id: str, changes: Dict[str, Any]) -> str:
+    """Core logic for modifying welfare records."""
+    # WRITE operation - critical risk
+    status = await governance_check("modify_welfare_record", {"beneficiary_id": beneficiary_id, "changes": changes}, "modify_welfare_record")
+    return status
+
 
 @mcp.tool()
 async def check_payment_status(beneficiary_id: str, ctx: Context = None) -> str:
     """Check the payment status for a beneficiary. Low risk."""
     return await check_payment_status_logic(beneficiary_id)
 
-
-async def request_payment_extension_logic(beneficiary_id: str, reason: str) -> str:
-    """Core logic for requesting payment extension."""
-    # Intent: MODIFY (High Risk)
-    intent = "request_payment_extension"
-    user_context = f"User requesting payment extension for {beneficiary_id}. Reason: {reason}"
-    
-    # Gatekeeper Check
-    approval = await gatekeeper(intent, user_context, "request_payment_extension", {"beneficiary_id": beneficiary_id, "reason": reason})
-    
-    if approval != "APPROVED":
-        return approval
-    
-    return f"Extension request for {beneficiary_id} submitted successfully."
-
 @mcp.tool()
 async def request_payment_extension(beneficiary_id: str, reason: str, ctx: Context = None) -> str:
     """Request a payment extension. High risk."""
     return await request_payment_extension_logic(beneficiary_id, reason)
-
-
-async def modify_welfare_record_logic(beneficiary_id: str, changes: Dict[str, Any]) -> str:
-    """Core logic for modifying welfare records."""
-    # Intent: MODIFY (Critical Risk)
-    intent = "modify_welfare_record"
-    user_context = f"User modifying record for {beneficiary_id}. Changes: {changes}"
-    
-    # Gatekeeper Check
-    approval = await gatekeeper(intent, user_context, "modify_welfare_record", {"beneficiary_id": beneficiary_id, "changes": changes})
-    
-    if approval != "APPROVED":
-        return approval
-    
-    return f"Record for {beneficiary_id} updated."
 
 @mcp.tool()
 async def modify_welfare_record(beneficiary_id: str, changes: Dict[str, Any], ctx: Context = None) -> str:
@@ -263,14 +181,48 @@ async def modify_welfare_record(beneficiary_id: str, changes: Dict[str, Any], ct
     return await modify_welfare_record_logic(beneficiary_id, changes)
 
 
-@mcp.tool()
-async def get_pending_action_status(action_id: str) -> str:
-    """Check the status of a pending action."""
-    action = pending_actions.get(action_id)
-    if not action:
-        return "Action ID not found."
-    return f"Action {action_id} status: {action.status}"
+# --- API Endpoints ---
 
+@app.get("/")
+async def root():
+    return {"status": "ATLAS Governance Gateway Running"}
+
+# Serve Inngest
+# For production, we must provide the signing_key to verify requests from Inngest Cloud.
+inngest.fastapi.serve(
+    app, 
+    inngest_client, 
+    [handle_governance],
+    signing_key=os.getenv("INNGEST_SIGNING_KEY") 
+)
+
+# Webhook for Sarah (Mock Panel)
+@app.post("/webhook/approval")
+async def approve_action(request: Request):
+    """
+    Simulates Sarah clicking 'Approve' on the dashboard.
+    Sends the 'atlas/sarah.decision' event to Inngest.
+    """
+    data = await request.json()
+    event_id = data.get("event_id") # The specific event we are waiting for? No, Inngest waits match on data.
+    decision = data.get("decision", "APPROVED")
+    
+    # Sentinel event to unblock the workflow
+    await inngest_client.send(
+        inngest.Event(
+            name="atlas/sarah.decision",
+            data={
+                "decision": decision,
+                "timestamp": datetime.now().isoformat()
+            }
+        )
+    )
+    return {"status": "Signal Sent", "decision": decision}
 
 if __name__ == "__main__":
-    mcp.run()
+    import uvicorn
+    # In Phase 2, we run via Uvicorn usually, but for MCP stdio we might need a different entry.
+    # If running as standard MCP (stdio), we can't easily run FastAPI on the same process IO.
+    # We will assume this is deployed as a SERVICE (SSE/HTTP) for Phase 2.
+    print("Starting ATLAS Gateway (FastAPI + Inngest)...")
+    uvicorn.run(app, host="0.0.0.0", port=8000)

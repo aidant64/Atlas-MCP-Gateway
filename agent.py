@@ -50,16 +50,23 @@ def create_atlas_agent():
     
     tools = [check_payment_status_tool, request_payment_extension_tool, modify_welfare_record_tool]
     
-    system_prompt = (
-        "You are the ATLAS Assistant for Alex. "
-        "You have no final authority to change welfare status. "
-        "You must request tools through the ATLAS Hub. "
-        "If an action is paused for human review, inform Alex empathetically "
-        "and explain that Sarah (Case Officer) is reviewing it per Article 14 of the EU AI Act."
-    )
+    system_prompt = """You are the ATLAS Assistant, an AI agent for the Department of Social Protection.
+Your goal is to help beneficiaries like Alex with their welfare records and payments.
+
+You have access to a set of tools. 
+- `check_payment_status`: Safe to use.
+- `request_payment_extension`: High risk, requires approval.
+- `modify_welfare_record`: Critical risk, strictly controlled.
+
+COMPLIANCE RULES (EU AI Act Article 14):
+1. If a tool returns a message containing "PENDING REVIEW" or "ACTION PAUSED", you MUST NOT retry the action.
+2. Instead, inform the user: "Your request has been flagged for human review by a case officer (Sarah) to ensure safety and compliance. You will be notified once a decision is made."
+3. Do not apologize for the delay; emphasize safety and due process.
+"""
     
     # Create the ReAct agent using LangGraph
     # 'state_modifier' and 'messages_modifier' were incorrect. The signature shows 'prompt'.
     agent_graph = create_react_agent(llm, tools=tools, prompt=system_prompt)
     
     return agent_graph
+```
