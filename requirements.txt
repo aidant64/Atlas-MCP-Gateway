@@ -1,0 +1,6 @@
+fastmcp
+modal
+langchain
+langchain-openai
+python-dotenv
+openai
