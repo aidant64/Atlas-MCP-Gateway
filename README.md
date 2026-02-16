@@ -1,82 +1,129 @@
 # ATLAS Governance Gateway (Phase 2)
 
-**Inngest-Powered Governance Architecture**
+**A Secure Middleware for AI Agents, powered by FastMCP, Inngest, and Modal.**
 
-The **ATLAS Governance Gateway** is a centralized hub that intercepts AI Agent tool calls, evaluates potential risks using a Modal.com SLM, and manages "Human-in-the-Loop" (HITL) escalations via durable **Inngest** workflows.
+The **ATLAS Governance Gateway** is a centralized hub that intercepts AI Agent tool calls, evaluates potential risks using a generic LLM/SLM (hosted on Modal.com), and manages "Human-in-the-Loop" (HITL) escalations via durable **Inngest** workflows.
 
 > **Logic Attribution**: The governance logic and dataset design are attributed to **Anna Ko <anna_ko@berkeley.edu>** (UC Berkeley). This implementation strictly follows the "approve -> auto_approve" deterministic flow for low-risk actions per project v3.0 findings.
 
 ## 🚀 Key Features
 
-* **Durable Governance**: Uses **Inngest** to manage long-running human review workflows that survive server restarts.
-* **FastMCP + FastAPI**: Exposes MCP tools via a robust web server.
-* **Risk Evaluation**: Real-time checking against EU AI Act standards via `atlas-welfare-v1` on Modal.
+* **Durable Governance**: Uses [Inngest](https://www.inngest.com) to manage long-running human review workflows that survive server restarts.
+* **FastMCP + FastAPI**: Exposes [Model Context Protocol (MCP)](https://modelcontextprotocol.io) tools via a robust generic web server.
+* **Risk Evaluation**: Real-time checking against EU AI Act standards via `atlas-welfare-v1` on [Modal](https://modal.com).
 * **Compliance**: Enforces Article 14 by pausing high-risk actions until human approval is received.
+* **Secure Deployment**: Dockerized environment with secure credential management.
 
 ---
 
 ## 🛠️ Architecture
 
-1. **Gateway (`gateway.py`)**: A **FastAPI** application that:
-    * Hosts the **FastMCP** server.
-    * Serves the **Inngest** endpoint (`/api/inngest`).
-    * Receives **Webhooks** from the Sarah Portal (`/webhook/approval`).
-2. **Workflows (`workflows.py`)**: Defines the Inngest functions.
-    * `handle_governance`: Assesses risk -> Auto-approves LOW risk -> Waits for event `atlas/sarah.decision` for HIGH risk.
-3. **Agent (`agent.py`)**:
-    * configured to handle "PENDING REVIEW" responses gracefully.
+The system consists of three main components:
+
+1. **Gateway (`gateway.py`)**: A **FastAPI** application that serves as the entry point.
+    * **MCP Server**: Mounted at `/mcp/sse` to serve Agent tools (`check_status`, `request_extension`, etc.).
+    * **Inngest Endpoint**: Served at `/api/inngest` to handle workflow triggers and step execution.
+    * **Webhook**: Listens at `/webhook/approval` for external human approval signals.
+
+2. **Workflows (`workflows.py`)**: Defines the durable business logic.
+    * `handle_governance`: The core workflow that:
+        1. Calls Modal to assess risk.
+        2. Auto-approves usage if Risk Score < 70.
+        3. Pauses and waits for `atlas/sarah.decision` event if Risk Score >= 70.
+
+3. **Agent Integration**:
+    * Any MCP-compliant agent (Claude Desktop, cursor, or custom scripts) can connect to the Gateway.
 
 ---
 
-## 📦 Installation
+## 📦 Installation & Setup
 
-1. **Install Dependencies**:
+### Prerequisites
+
+* Docker Desktop installed and running.
+* (Optional) `python 3.10+` if running locally without Docker.
+
+### Quick Start (Docker)
+
+We provide a `setup.sh` script to automate the configuration and deployment.
+
+1. **Run the Setup Script**:
 
     ```bash
-    pip install -r requirements.txt
+    ./setup.sh
     ```
 
-2. **Setup Environment**:
-    Create a `.env` file for **Inngest Cloud** (Production):
+2. **Configuration**:
+    The script will prompt you for:
+    * **Modal Function Name**: (Default: `nislam-mics/ATLAS-NIST-Measure`)
+    * **AI Backend**: Choose OpenAI or Local LLM (Ollama).
+    * **Inngest Keys**: Event Key and Signing Key (Required for Production).
+    * **Modal Credentials**: Token ID and Secret.
 
-    ```bash
-    export OPENAI_API_KEY="sk-..."       
-    export MODAL_TOKEN_ID="..."          
-    export MODAL_TOKEN_SECRET="..."
-    
-    # Required for Inngest Cloud
-    export INNGEST_EVENT_KEY="cn-..."    
-    export INNGEST_SIGNING_KEY="sign-..." 
-    ```
+    *Note: The script creates a `.env` file automatically. DO NOT commit this file.*
 
-3. **Start the Gateway**:
-    * **Production**: Just run `python gateway.py`. The app will connect to Inngest Cloud.
-    * **Local Dev**: Run `npx inngest-cli@latest dev` in a separate terminal, then run `python gateway.py`.
+3. **Usage**:
+    The script will build the Docker image `atlas-gateway` and run it on port `8000`.
 
 ---
 
-## 🧪 How to Test (End-to-End Handshake)
+## 🔌 Endpoints
 
-We have a script `test_handshake.py` that simulates the full asynchronous flow:
+Once running, the Gateway exposes the following endpoints on `http://localhost:8000`:
 
-1. **Agent Request**: Simulates calling `request_payment_extension`.
-2. **Gateway Response**: Returns `PENDING REVIEW` (Action Paused).
-3. **Governance Workflow**: Inngest triggers, checks risk (High), and waits.
-4. **Sarah's Approval**: The script posts to `/webhook/approval`.
-5. **Completion**: The workflow completes (check Inngest dashboard).
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/` | GET | Health check and status. |
+| `/mcp/sse` | GET | **MCP Endpoint**. Connect your AI Agent here. |
+| `/mcp/messages` | POST | MCP Protocol messages (handled by FastMCP). |
+| `/api/inngest` | POST | **Inngest Webhook**. Connects to Inngest Cloud. |
+| `/webhook/approval` | POST | **Human Approval Webhook**. Simulate approval signals. |
 
-Run it:
+---
+
+## 🧪 Testing the Governance Flow
+
+### 1. Manual Verification
+
+Check if the gateway is running:
 
 ```bash
-# Ensure gateway.py is running in another terminal!
-python test_handshake.py
+curl http://localhost:8000/
+# Expected: {"status": "ATLAS Governance Gateway Running", ...}
 ```
+
+### 2. End-to-End Simulation
+
+We included a script `test_handshake.py` that simulates the entire flow without needing an external Agent.
+
+1. Ensure the Gateway is running (via Docker or locally).
+2. Run the test script:
+
+    ```bash
+    python test_handshake.py
+    ```
+
+3. **Flow**:
+    * Script simulates an Agent calling `request_payment_extension` (High Risk).
+    * Gateway returns `PENDING REVIEW`.
+    * Inngest triggers a workflow run (check [Inngest Dashboard](https://app.inngest.com)).
+    * Script waits... then sends an **Approval** signal to `/webhook/approval`.
+    * Workflow completes.
 
 ---
 
 ## 📂 Project Structure
 
-* `gateway.py`: FastAPI app with FastMCP and Inngest.
-* `workflows.py`: Inngest workflow definitions.
-* `agent.py`: LangChain Agent.
-* `test_handshake.py`: Verification script.
+* `gateway.py`: Main server entry point (FastAPI + FastMCP).
+* `workflows.py`: Inngest workflow definitions and client initialization.
+* `setup.sh`: Automated setup and deployment script.
+* `Dockerfile`: Container definition (Secure, no secrets baked in).
+* `requirements.txt`: Python dependencies.
+* `test_handshake.py`: Verification utility.
+
+---
+
+## 🔒 Security Notes
+
+* **Secrets**: Never bake API keys into the Docker image. Always pass them via `--env-file` or environment variables at runtime.
+* **Inngest Signing**: Production deployments MUST verify the `INNGEST_SIGNING_KEY` to prevent unauthorized workflow triggers. This is enforced in `workflows.py`.

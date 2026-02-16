@@ -84,9 +84,10 @@ if [[ "$RUN_DOCKER" =~ ^[Yy]$ ]]; then
     
     echo "Running Docker container..."
     # Connect with env file which includes all tokens
-    docker run -it --rm --env-file .env atlas-gateway
+    # Expose port 8000 for MCP and Inngest
+    docker run -it --rm -p 8000:8000 --env-file .env atlas-gateway
 else
     echo "Setup complete. To run manually:"
     echo "docker build -t atlas-gateway ."
-    echo "docker run --env-file .env atlas-gateway"
+    echo "docker run -p 8000:8000 --env-file .env atlas-gateway"
 fi

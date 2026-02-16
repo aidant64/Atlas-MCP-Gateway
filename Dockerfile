@@ -22,10 +22,8 @@ COPY . .
 # ENV PORT=8000
 # EXPOSE 8000
 
-# Define environment variables with defaults (can be overridden at runtime)
+# Environment variables (runtime only)
 # OPENAI_API_KEY is optional/secret
-ENV MODAL_TOKEN_ID=""
-ENV MODAL_TOKEN_SECRET=""
 
 # Command to run the application
 # We use standard IO mode for MCP by default, but this can be changed to an SSE server

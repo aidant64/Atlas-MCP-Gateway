@@ -13,10 +13,11 @@ MODAL_FUNCTION_NAME = os.getenv("MODAL_FUNCTION_NAME", "nislam-mics/ATLAS-NIST-M
 # INNGEST_EVENT_KEY is required for production (sending events to Inngest Cloud)
 inngest_client = inngest.Inngest(
     app_id="atlas_governance",
-    event_key=os.getenv("INNGEST_EVENT_KEY") 
+    event_key=os.getenv("INNGEST_EVENT_KEY"),
+    signing_key=os.getenv("INNGEST_SIGNING_KEY")
 )
 
-@inngest.create_function(
+@inngest_client.create_function(
     fn_id="governance-workflow",
     trigger=inngest.TriggerEvent(event="atlas/tool.execution_requested"),
 )

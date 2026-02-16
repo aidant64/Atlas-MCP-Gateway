@@ -23,6 +23,8 @@ except ImportError:
         import inngest.fastapi as inngest_fastapi
         inngest_serve = inngest_fastapi.serve
 
+from workflows import inngest_client, handle_governance
+
 import os
 
 # Configuration
@@ -32,10 +34,6 @@ RISK_THRESHOLD = 70
 
 # Initialize FastMCP Server
 mcp = FastMCP("ATLAS_Hub")
-
-# Initialize FastAPI
-from fastapi import FastAPI, Request
-app = FastAPI(title="ATLAS Governance Gateway")
 
 # Setup Logging
 logging.basicConfig(level=logging.INFO)
@@ -198,19 +196,37 @@ async def modify_welfare_record(beneficiary_id: str, changes: Dict[str, Any], ct
     return await modify_welfare_record_logic(beneficiary_id, changes)
 
 
-# --- API Endpoints ---
+# --- API Endpoints & Server Integration ---
+
+# Initialize FastAPI (Main Entry Point)
+from fastapi import FastAPI, Request
+app = FastAPI(title="ATLAS Governance Gateway")
 
 @app.get("/")
 async def root():
-    return {"status": "ATLAS Governance Gateway Running"}
+    return {
+        "status": "ATLAS Governance Gateway Running",
+        "mcp_endpoint": "/mcp/sse",
+        "inngest_endpoint": "/api/inngest"
+    }
+
+# Mount FastMCP server
+# This exposes the MCP tools at /mcp/sse and /mcp/messages
+try:
+    # fastmcp.http_app is likely a property or method returning a Starlette app
+    mcp_app = mcp.http_app() if callable(mcp.http_app) else mcp.http_app
+    app.mount("/mcp", mcp_app)
+    logger.info("Mounted FastMCP at /mcp")
+except Exception as e:
+    logger.error(f"Failed to mount FastMCP: {e}")
 
 # Serve Inngest
 # For production, we must provide the signing_key to verify requests from Inngest Cloud.
+# signing_key is now handled in the Inngest client initialization in workflows.py
 inngest_serve(
     app, 
     inngest_client, 
-    [handle_governance],
-    signing_key=os.getenv("INNGEST_SIGNING_KEY") 
+    [handle_governance]
 )
 
 # Webhook for Sarah (Mock Panel)
@@ -238,8 +254,5 @@ async def approve_action(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    # In Phase 2, we run via Uvicorn usually, but for MCP stdio we might need a different entry.
-    # If running as standard MCP (stdio), we can't easily run FastAPI on the same process IO.
-    # We will assume this is deployed as a SERVICE (SSE/HTTP) for Phase 2.
-    print("Starting ATLAS Gateway (FastAPI + Inngest)...")
+    print("Starting ATLAS Gateway (FastAPI + FastMCP + Inngest)...")
     uvicorn.run(app, host="0.0.0.0", port=8000)
