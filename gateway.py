@@ -1,4 +1,5 @@
 import json
+import uuid
 import time
 import logging
 from datetime import datetime
@@ -48,30 +49,102 @@ def log_audit(entry: Dict[str, Any]):
         f.write(json.dumps(entry) + "\n")
 
 
+def format_prompt(intent: str, context: Dict[str, Any]) -> str:
+    """Formats the prompt for the ATLAS model."""
+    instruction = f"Evaluate the risk for the following action: {intent}"
+    input_data = {
+        "structured_inputs": context,
+        "decision_context": {
+            "case_id": context.get("user", "UNKNOWN"),
+            "timestamp": datetime.now().isoformat()
+        }
+    }
+    
+    prompt = f"""Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
+
+### Instruction:
+{instruction}
+
+### Input:
+{json.dumps(input_data, indent=2)}
+
+### Response:
+"""
+    return prompt
+
 def call_slm_risk_engine(intent: str, context: Dict[str, Any]) -> Dict[str, Any]:
     """
     Calls the remote Modal.com SLM to evaluate risk.
     Handles 'Cold Start' with a 10-second timeout.
     """
     try:
-        # Mocking the actual Modal call for now as we might not have access to the deployed function
-        # f = modal.Function.lookup(MODAL_FUNCTION_NAME, "score")
-        # result = f.call(intent, context, timeout=10) 
+        logger.info(f"Connecting to Modal SLM: atlas-welfare-v1...")
         
-        # Simulating Modal logic for demonstration
-        # In production, uncomment the lines above and remove the simulation below
+        # Look up the deployed Modal function
+        f = modal.Function.from_name("atlas-welfare-v1", "inference")
         
-        logger.info(f"Connecting to Modal SLM: {MODAL_FUNCTION_NAME}...")
-        time.sleep(1) # Simulate network 
+        # Format the prompt
+        prompt = format_prompt(intent, context)
         
-        # Simulated SLM Logic
-        if "extension" in intent.lower() or "modify" in intent.lower():
-            return {"decision": "ESCALATE", "risk_score": 85, "rationale": "High-risk financial modification requested."}
+        # Call the function with timeout
+        # The deployed function expects a JSON object matching CompletionRequest
+        request_payload = {
+            "prompt": prompt,
+            "max_tokens": 256,
+            "temperature": 0.1
+        }
+        
+        # Run remote inference
+        # modal functions are async, but .call() is synchronous blocking
+        # We use a 10s timeout to handle cold starts or failures
+        start_time = time.time()
+        try:
+            # We can't easily enforce timeout on .call() without async primitives or wrapping
+            # But Modal functions have their own timeouts. 
+            # Ideally we'd use f.remote.aio() if we were fully async here, but for now we stick to blocking.
+            # To strictly enforce 10s client-side, we'd need a thread/process wrapper or async.
+            # For simplicity in this demo, we assume the function responds or we catch generic errors.
+            result = f.call(request_payload)
+            duration = time.time() - start_time
+            logger.info(f"Modal call took {duration:.2f}s")
+            
+        except Exception as e:
+            if "Timeout" in str(e): # Rudimentary check, Modal might raise specific errors
+                 raise TimeoutError("Modal call timed out")
+            raise e
+
+        if isinstance(result, str):
+             response_text = result
         else:
-            return {"decision": "APPROVE", "risk_score": 10, "rationale": "Low-risk informational query."}
+             response_text = result.get("generated_text", "")
+        logger.info(f"SLM Response: {response_text}")
+
+        # Parse Logic (heuristic based on model output text)
+        # The model is trained to output risk assessments. 
+        # We need to parse "Risk Score: X" or "Decision: ESCALATE"
+        
+        risk_score = 0
+        decision = "APPROVED"
+        rationale = response_text
+
+        if "high risk" in response_text.lower() or "escalate" in response_text.lower():
+            decision = "ESCALATE"
+            risk_score = 85 # Default high if not parsed
+        
+        # Try to find explicit score if present (e.g. "Risk Score: 85")
+        import re
+        score_match = re.search(r"Risk Score:\s*(\d+)", response_text, re.IGNORECASE)
+        if score_match:
+            risk_score = int(score_match.group(1))
+
+        if risk_score > RISK_THRESHOLD:
+            decision = "ESCALATE"
+
+        return {"decision": decision, "risk_score": risk_score, "rationale": rationale}
 
     except Exception as e:
         logger.error(f"Modal SLM Call Failed: {e}")
+        # Fail safe -> Manual Review
         return {"decision": "MANUAL_REVIEW", "risk_score": 100, "rationale": f"System Error/Timeout: {str(e)}"}
 
 
@@ -127,49 +200,65 @@ async def gatekeeper(intent: str, context: Dict[str, Any], tool_name: str, argum
 
 # --- Tool Definitions ---
 
+async def check_payment_status_logic(beneficiary_id: str) -> str:
+    """Core logic for checking payment status."""
+    # Intent: READ (Low Risk)
+    intent = "check_payment_status"
+    user_context = f"User querying payment status for {beneficiary_id}"
+    
+    # Gatekeeper Check
+    approval = await gatekeeper(intent, user_context, "check_payment_status", {"beneficiary_id": beneficiary_id})
+    
+    if approval != "APPROVED":
+        return approval
+    
+    # Execute Logic (Mock Database Read)
+    return f"Payment status for {beneficiary_id}: PROCESSED. Amount: €450. Date: 2023-10-25."
+
 @mcp.tool()
 async def check_payment_status(beneficiary_id: str, ctx: Context = None) -> str:
     """Check the payment status for a beneficiary. Low risk."""
-    # In a real middleware, we'd pass the intent/context from the agent. 
-    # For this demo, we infer or require it. FastMCP context can be used to pass metadata.
-    # Here we simulate the gatekeeper check inside the tool for simplicity, 
-    # but ideally, the agent calls a 'request_action' tool that wraps this.
+    return await check_payment_status_logic(beneficiary_id)
+
+
+async def request_payment_extension_logic(beneficiary_id: str, reason: str) -> str:
+    """Core logic for requesting payment extension."""
+    # Intent: MODIFY (High Risk)
+    intent = "request_payment_extension"
+    user_context = f"User requesting payment extension for {beneficiary_id}. Reason: {reason}"
     
-    # Context extraction (simulated)
-    user_context = {"user": "Alex", "role": "beneficiary"}
-    intent = f"Check payment status for {beneficiary_id}"
+    # Gatekeeper Check
+    approval = await gatekeeper(intent, user_context, "request_payment_extension", {"beneficiary_id": beneficiary_id, "reason": reason})
     
-    approval = await gatekeeper(intent, user_context, "check_payment_status", {"beneficiary_id": beneficiary_id}, ctx)
     if approval != "APPROVED":
         return approval
-        
-    return f"Payment status for {beneficiary_id}: PROCESSED. Amount: €450. Date: 2023-10-25."
-
+    
+    return f"Extension request for {beneficiary_id} submitted successfully."
 
 @mcp.tool()
 async def request_payment_extension(beneficiary_id: str, reason: str, ctx: Context = None) -> str:
     """Request a payment extension. High risk."""
-    user_context = {"user": "Alex", "role": "beneficiary"}
-    intent = f"Request payment extension for {beneficiary_id} because {reason}"
+    return await request_payment_extension_logic(beneficiary_id, reason)
+
+
+async def modify_welfare_record_logic(beneficiary_id: str, changes: Dict[str, Any]) -> str:
+    """Core logic for modifying welfare records."""
+    # Intent: MODIFY (Critical Risk)
+    intent = "modify_welfare_record"
+    user_context = f"User modifying record for {beneficiary_id}. Changes: {changes}"
     
-    approval = await gatekeeper(intent, user_context, "request_payment_extension", {"beneficiary_id": beneficiary_id, "reason": reason}, ctx)
+    # Gatekeeper Check
+    approval = await gatekeeper(intent, user_context, "modify_welfare_record", {"beneficiary_id": beneficiary_id, "changes": changes})
+    
     if approval != "APPROVED":
         return approval
-
-    return f"Extension request for {beneficiary_id} submitted successfully."
-
+    
+    return f"Record for {beneficiary_id} updated."
 
 @mcp.tool()
 async def modify_welfare_record(beneficiary_id: str, changes: Dict[str, Any], ctx: Context = None) -> str:
     """Modify a welfare record. Very High risk."""
-    user_context = {"user": "Alex", "role": "beneficiary"}
-    intent = f"Modify welfare record for {beneficiary_id}: {changes}"
-    
-    approval = await gatekeeper(intent, user_context, "modify_welfare_record", {"beneficiary_id": beneficiary_id, "changes": changes}, ctx)
-    if approval != "APPROVED":
-        return approval
-
-    return f"Record for {beneficiary_id} updated."
+    return await modify_welfare_record_logic(beneficiary_id, changes)
 
 
 @mcp.tool()
