@@ -261,18 +261,49 @@ Evaluate the unemployment benefit application risk.
         <p class="subtitle">How to connect an AI Agent to the ATLAS Governance Gateway.</p>
 
         <div style="margin-top: 1.5rem;">
-            <h3>1. Connection Details</h3>
-            <p style="color: #cbd5e1; margin-bottom: 0.5rem;">Configure your MCP Client (e.g., Claude Desktop, Cursor,
-                or Custom Agent) with these settings:</p>
-            <ul style="color: #94a3b8; margin-bottom: 1rem;">
-                <li><strong>Type:</strong> SSE (Server-Sent Events)</li>
-                <li><strong>URL:</strong> <code>https://atlas-mcp-gateway-vercel.vercel.app/mcp/sse</code></li>
-                <li><strong>Headers:</strong> <code>{"Authorization": "Bearer &lt;YOUR_API_KEY&gt;"}</code></li>
+            <h3>1. Client Setup (Claude Desktop)</h3>
+            <p style="color: #cbd5e1; margin-bottom: 0.5rem;">To connect your AI Agent (e.g., Claude) to this Gateway,
+                add the following to your <code>claude_desktop_config.json</code>:</p>
+            <div
+                style="background: #0f172a; padding: 1rem; border-radius: 6px; overflow-x: auto; margin-bottom: 1.5rem;">
+                <pre style="margin: 0; font-size: 0.8rem; color: #cbd5e1;">
+{
+  "mcpServers": {
+    "atlas-gateway": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sse",
+        "--url", "https://atlas-mcp-gateway-vercel.vercel.app/mcp/sse",
+        "--header", "Authorization: Bearer &lt;YOUR_API_KEY&gt;"
+      ]
+    }
+  }
+}</pre>
+            </div>
+
+            <h3>2. Connecting to Sarah's Portal (HITL)</h3>
+            <p style="color: #cbd5e1; margin-bottom: 0.5rem;">The <strong>Human-in-the-Loop (HITL)</strong> system
+                integrates via event-driven webhooks:</p>
+            <ul style="color: #94a3b8; margin-bottom: 1rem; list-style-type: none; padding-left: 0;">
+                <li style="margin-bottom: 0.5rem;">
+                    <span style="color: #f59e0b; font-weight: bold;">➡ Outbound:</span>
+                    The Gateway sends <code>atlas/tool.execution_requested</code> events to the running Inngest server.
+                    Sarah's Portal listens to these events to display pending tasks.
+                </li>
+                <li style="margin-bottom: 0.5rem;">
+                    <span style="color: #10b981; font-weight: bold;">⬅ Inbound:</span>
+                    When Sarah approves/rejects a task, her Portal must send a POST request to:
+                    <code
+                        style="display: block; background: #1e293b; padding: 0.5rem; margin-top: 0.25rem; border-radius: 4px;">https://atlas-mcp-gateway-vercel.vercel.app/webhook/approval</code>
+                    <span style="font-size: 0.8rem; opacity: 0.8;">(Payload:
+                        <code>{ "event_id": "...", "decision": "APPROVED" }</code>)</span>
+                </li>
             </ul>
         </div>
 
         <div style="margin-top: 1.5rem;">
-            <h3>2. Architecture & Data Flow</h3>
+            <h3>3. Architecture & Data Flow</h3>
             <div class="diagram-container"
                 style="background: #1e293b00; padding: 1rem; border-radius: 6px; overflow-x: auto; text-align: center;">
                 <!-- Mermaid Diagram -->
@@ -300,7 +331,7 @@ Evaluate the unemployment benefit application risk.
         </div>
 
         <div style="margin-top: 1.5rem;">
-            <h3>3. Available Tools (Schema)</h3>
+            <h3>4. Available Tools (Schema)</h3>
 
             <div class="tool-card" style="margin-bottom: 1rem; border-left: 4px solid #10b981; padding-left: 1rem;">
                 <h4 style="color: #10b981; margin-bottom: 0.25rem;">check_payment_status</h4>
