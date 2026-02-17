@@ -273,31 +273,41 @@ Evaluate the unemployment benefit application risk.
 
         <div style="margin-top: 1.5rem;">
             <h3>2. Architecture & Data Flow</h3>
-            <div style="background: #1e293b; padding: 1rem; border-radius: 6px; overflow-x: auto;">
-                <code style="font-family: monospace; color: #60a5fa;">
-                        [AI Agent] <br>
-                         &nbsp;&nbsp;|<br>
-                         &nbsp;&nbsp;+-- (MCP Protocol) --> <strong>[ATLAS Gateway]</strong> <br>
-                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>
-                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+-- (HTTP) --> <strong>[Modal SLM (Brain)]</strong> <br>
-                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<em>(Risk Analysis & Decision)</em><br>
-                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>
-                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+-- (Events) --> <strong>[Inngest Workflow]</strong> <br>
-                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>
-                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+-- (Approval Task) --> <strong>[Human Portal (Sara)]</strong>
-                    </code>
+            <div class="diagram-container"
+                style="background: #1e293b00; padding: 1rem; border-radius: 6px; overflow-x: auto; text-align: center;">
+                <!-- Mermaid Diagram -->
+                <div class="mermaid">
+                    graph LR
+                    Agent([🤖 AI Agent])
+                    Gateway{ATLAS Gateway}
+                    Brain([🧠 Modal SLM])
+                    Inngest[⚡ Inngest Workflow]
+                    Human([👤 Human Portal])
+
+                    Agent ==>|MCP / SSE| Gateway
+                    Gateway -.->|Risk Analysis| Brain
+                    Gateway ==>|Event Trigger| Inngest
+                    Inngest -.->|Approval Task| Human
+                    Human ==x|Decision| Inngest
+
+                    style Agent fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+                    style Gateway fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
+                    style Brain fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+                    style Inngest fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+                    style Human fill:#ef4444,stroke:#b91c1c,stroke-width:2px,color:#fff
+                </div>
             </div>
         </div>
 
         <div style="margin-top: 1.5rem;">
             <h3>3. Available Tools (Schema)</h3>
 
-            <div style="margin-bottom: 1rem;">
-                <h4 style="color: #60a5fa; margin-bottom: 0.25rem;">check_payment_status</h4>
+            <div class="tool-card" style="margin-bottom: 1rem; border-left: 4px solid #10b981; padding-left: 1rem;">
+                <h4 style="color: #10b981; margin-bottom: 0.25rem;">check_payment_status</h4>
                 <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">Retrieves payment history. <em>(Low Risk -
                         Auto Approved)</em></p>
                 <pre
-                    style="background: #0f172a; padding: 0.5rem; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; margin-top: 0.5rem;">
+                    style="background: #0f172a; padding: 0.75rem; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; margin-top: 0.5rem;">
 {
   "name": "check_payment_status",
   "arguments": {
@@ -306,12 +316,12 @@ Evaluate the unemployment benefit application risk.
 }</pre>
             </div>
 
-            <div style="margin-bottom: 1rem;">
-                <h4 style="color: #60a5fa; margin-bottom: 0.25rem;">request_payment_extension</h4>
+            <div class="tool-card" style="margin-bottom: 1rem; border-left: 4px solid #f59e0b; padding-left: 1rem;">
+                <h4 style="color: #f59e0b; margin-bottom: 0.25rem;">request_payment_extension</h4>
                 <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">Request a deadline extension. <em>(High Risk -
                         Triggers Governance)</em></p>
                 <pre
-                    style="background: #0f172a; padding: 0.5rem; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; margin-top: 0.5rem;">
+                    style="background: #0f172a; padding: 0.75rem; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; margin-top: 0.5rem;">
 {
   "name": "request_payment_extension",
   "arguments": {
@@ -321,12 +331,12 @@ Evaluate the unemployment benefit application risk.
 }</pre>
             </div>
 
-            <div>
-                <h4 style="color: #60a5fa; margin-bottom: 0.25rem;">modify_welfare_record</h4>
+            <div class="tool-card" style="margin-bottom: 1rem; border-left: 4px solid #ef4444; padding-left: 1rem;">
+                <h4 style="color: #ef4444; margin-bottom: 0.25rem;">modify_welfare_record</h4>
                 <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">Update beneficiary details. <em>(Critical Risk
                         - Requires Approval)</em></p>
                 <pre
-                    style="background: #0f172a; padding: 0.5rem; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; margin-top: 0.5rem;">
+                    style="background: #0f172a; padding: 0.75rem; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; margin-top: 0.5rem;">
 {
   "name": "modify_welfare_record",
   "arguments": {
@@ -337,6 +347,12 @@ Evaluate the unemployment benefit application risk.
             </div>
         </div>
     </div>
+
+    <!-- Load Mermaid.js -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+    </script>
 
     <div class="card">
         <h2>Response Log</h2>
