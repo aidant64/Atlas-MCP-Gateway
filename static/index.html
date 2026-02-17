@@ -254,10 +254,94 @@ Evaluate the unemployment benefit application risk.
             </div>
         </div>
 
-        <div class="card">
-            <h2>Response Log</h2>
-            <div id="logs">// Waiting for action...</div>
+    </div>
+
+    <div class="card" style="margin-bottom: 2rem;">
+        <h2>Integration Guide & MCP Schema</h2>
+        <p class="subtitle">How to connect an AI Agent to the ATLAS Governance Gateway.</p>
+
+        <div style="margin-top: 1.5rem;">
+            <h3>1. Connection Details</h3>
+            <p style="color: #cbd5e1; margin-bottom: 0.5rem;">Configure your MCP Client (e.g., Claude Desktop, Cursor,
+                or Custom Agent) with these settings:</p>
+            <ul style="color: #94a3b8; margin-bottom: 1rem;">
+                <li><strong>Type:</strong> SSE (Server-Sent Events)</li>
+                <li><strong>URL:</strong> <code>https://atlas-mcp-gateway-vercel.vercel.app/mcp/sse</code></li>
+                <li><strong>Headers:</strong> <code>{"Authorization": "Bearer &lt;YOUR_API_KEY&gt;"}</code></li>
+            </ul>
         </div>
+
+        <div style="margin-top: 1.5rem;">
+            <h3>2. Architecture & Data Flow</h3>
+            <div style="background: #1e293b; padding: 1rem; border-radius: 6px; overflow-x: auto;">
+                <code style="font-family: monospace; color: #60a5fa;">
+                        [AI Agent] <br>
+                         &nbsp;&nbsp;|<br>
+                         &nbsp;&nbsp;+-- (MCP Protocol) --> <strong>[ATLAS Gateway]</strong> <br>
+                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>
+                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+-- (HTTP) --> <strong>[Modal SLM (Brain)]</strong> <br>
+                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<em>(Risk Analysis & Decision)</em><br>
+                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>
+                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+-- (Events) --> <strong>[Inngest Workflow]</strong> <br>
+                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>
+                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+-- (Approval Task) --> <strong>[Human Portal (Sara)]</strong>
+                    </code>
+            </div>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+            <h3>3. Available Tools (Schema)</h3>
+
+            <div style="margin-bottom: 1rem;">
+                <h4 style="color: #60a5fa; margin-bottom: 0.25rem;">check_payment_status</h4>
+                <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">Retrieves payment history. <em>(Low Risk -
+                        Auto Approved)</em></p>
+                <pre
+                    style="background: #0f172a; padding: 0.5rem; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; margin-top: 0.5rem;">
+{
+  "name": "check_payment_status",
+  "arguments": {
+    "beneficiary_id": "string"
+  }
+}</pre>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <h4 style="color: #60a5fa; margin-bottom: 0.25rem;">request_payment_extension</h4>
+                <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">Request a deadline extension. <em>(High Risk -
+                        Triggers Governance)</em></p>
+                <pre
+                    style="background: #0f172a; padding: 0.5rem; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; margin-top: 0.5rem;">
+{
+  "name": "request_payment_extension",
+  "arguments": {
+    "beneficiary_id": "string",
+    "reason": "string"
+  }
+}</pre>
+            </div>
+
+            <div>
+                <h4 style="color: #60a5fa; margin-bottom: 0.25rem;">modify_welfare_record</h4>
+                <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">Update beneficiary details. <em>(Critical Risk
+                        - Requires Approval)</em></p>
+                <pre
+                    style="background: #0f172a; padding: 0.5rem; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; margin-top: 0.5rem;">
+{
+  "name": "modify_welfare_record",
+  "arguments": {
+    "beneficiary_id": "string",
+    "changes": "object"
+  }
+}</pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Response Log</h2>
+        <div id="logs">// Waiting for action...</div>
+    </div>
     </div>
 
     <script>
