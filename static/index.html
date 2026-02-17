@@ -267,7 +267,7 @@
             <div class="grid-container">
                 <!-- Left Column: Setup Instructions -->
                 <div>
-                    <h3>1. Client & Portal Setup</h3>
+                    <h3>1. Client Agent Setup</h3>
 
                     <div style="margin-bottom: 2rem;">
                         <h4 style="color: #cbd5e1; margin-bottom: 0.5rem;">🤖 AI Agent (Claude/Cursor)</h4>
@@ -289,63 +289,7 @@
                         </div>
                     </div>
 
-                    <div>
-                        <h4 style="color: #cbd5e1; margin-bottom: 0.5rem;">👤 Sara's Portal (HITL)</h4>
-                        <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem;">The Portal acts as the
-                            "Human in the Loop". It listens for events and sends decisions back.</p>
 
-                        <!-- Listen Section -->
-                        <div style="margin-bottom: 1.5rem;">
-                            <div style="font-size: 0.8rem; color: #cbd5e1; margin-bottom: 0.5rem; font-weight: 600;">1.
-                                LISTEN (Inngest Function)</div>
-                            <div
-                                style="background: #0f172a; padding: 1rem; border-radius: 6px; border: 1px solid #334155; overflow-x: auto;">
-                                <pre
-                                    style="margin: 0; font-size: 0.75rem; color: #cbd5e1; font-family: 'Fira Code', monospace;">
-inngest.createFunction(
-  { id: "human-approval" },
-  { event: "<span style="color: #38bdf8;">atlas/tool.execution_requested</span>" },
-  async ({ event, step }) => {
-    // 1. Notify Human (e.g., Slack/Email)
-    await step.run("notify", async () => {
-      await sendSlackNotification(event.data);
-    });
-    
-    // 2. Wait for Webhook (Decision)
-    const decision = await step.waitForEvent(
-      "approval.received", 
-      { timeout: "24h" }
-    );
-    return decision;
-  }
-);</pre>
-                            </div>
-                        </div>
-
-                        <!-- Respond Section -->
-                        <div>
-                            <div style="font-size: 0.8rem; color: #cbd5e1; margin-bottom: 0.5rem; font-weight: 600;">2.
-                                RESPOND (Webhook)</div>
-                            <div
-                                style="background: #0f172a; padding: 1rem; border-radius: 6px; border: 1px solid #334155; overflow-x: auto;">
-                                <pre
-                                    style="margin: 0; font-size: 0.75rem; color: #cbd5e1; font-family: 'Fira Code', monospace;">
-// POST /webhook/approval
-await fetch("<span style="color: #4ade80;">https://atlas.../webhook/approval</span>", {
-  method: "POST",
-  headers: { 
-    "Authorization": "Bearer " + process.env.ATLAS_KEY,
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    event_id: event.data.event_id,
-    decision: "<span style="color: #4ade80;">APPROVED</span>", // or REJECTED
-    notes: "Verified income documents."
-  })
-});</pre>
-                            </div>
-                        </div>
-                    </div>
 
                     <!-- Right Column: Architecture Diagram -->
                     <div>
@@ -376,8 +320,81 @@ await fetch("<span style="color: #4ade80;">https://atlas.../webhook/approval</sp
                     </div>
                 </div>
 
+                <!-- Full Width Row: Sara's Portal (HITL) -->
+                <div
+                    style="background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 2rem; margin-bottom: 3rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);">
+                    <div style="border-bottom: 1px solid #1e293b; padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                        <h3 style="margin: 0; color: #f8fafc; display: flex; align-items: center; gap: 0.75rem;">
+                            <span>👤</span> 3. Sara's Portal Integration (HITL)
+                        </h3>
+                        <p style="margin: 0.5rem 0 0 0; color: #94a3b8; font-size: 0.95rem;">
+                            The Portal listens for "High Risk" events (e.g., extensions, welfare changes) and allows a
+                            human to Approve or Reject them.
+                        </p>
+                    </div>
+
+                    <div class="grid-container"
+                        style="gap: 2rem; margin-top: 0; display: grid; grid-template-columns: 1fr 1fr;">
+                        <!-- Listen -->
+                        <div>
+                            <div
+                                style="font-size: 0.75rem; color: #38bdf8; margin-bottom: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+                                Step 1: Listen (Inngest)
+                            </div>
+                            <div
+                                style="background: #1e293b; padding: 1.25rem; border-radius: 8px; border: 1px solid #334155; overflow-x: auto;">
+                                <pre
+                                    style="margin: 0; font-size: 0.75rem; color: #cbd5e1; font-family: 'Fira Code', monospace; line-height: 1.6;">
+inngest.createFunction(
+  { id: "human-approval" },
+  { event: "<span style="color: #38bdf8;">atlas/tool.execution_requested</span>" },
+  async ({ event, step }) => {
+    // 1. Notify Human
+    await step.run("notify", async () => {
+      await sendSlackNotification(event.data);
+    });
+    
+    // 2. Wait for Decision
+    const decision = await step.waitForEvent(
+      "approval.received", 
+      { timeout: "24h" }
+    );
+    return decision;
+  }
+);</pre>
+                            </div>
+                        </div>
+
+                        <!-- Respond -->
+                        <div>
+                            <div
+                                style="font-size: 0.75rem; color: #4ade80; margin-bottom: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+                                Step 2: Respond (Webhook)
+                            </div>
+                            <div
+                                style="background: #1e293b; padding: 1.25rem; border-radius: 8px; border: 1px solid #334155; overflow-x: auto;">
+                                <pre
+                                    style="margin: 0; font-size: 0.75rem; color: #cbd5e1; font-family: 'Fira Code', monospace; line-height: 1.6;">
+// POST /webhook/approval
+await fetch("<span style="color: #4ade80;">.../webhook/approval</span>", {
+  method: "POST",
+  headers: { 
+    "Content-Type": "application/json",
+    "Authorization": "Bearer KEY" 
+  },
+  body: JSON.stringify({
+    event_id: event.data.event_id,
+    decision: "<span style="color: #4ade80;">APPROVED</span>",
+    notes: "Verified documents."
+  })
+});</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div style="margin-top: 3rem;">
-                    <h3>3. Available Tools & Usage Context</h3>
+                    <h3>4. Available Tools & Usage Context</h3>
                     <p style="color: #94a3b8; margin-bottom: 1.5rem;">These tools are exposed to the AI Agent via MCP.
                         The
                         Agent
