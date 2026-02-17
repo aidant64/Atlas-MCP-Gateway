@@ -9,12 +9,15 @@
         :root {
             --bg-color: #0f172a;
             --card-bg: #1e293b;
+            --sidebar-bg: #020617;
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
             --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
             --success: #4ade80;
             --error: #f87171;
             --border: #334155;
+            --sidebar-width: 260px;
         }
 
         body {
@@ -23,36 +26,98 @@
             color: var(--text-primary);
             margin: 0;
             padding: 0;
+            height: 100vh;
             display: flex;
-            justify-content: center;
-            min-height: 100vh;
+            overflow: hidden;
+            /* Prevent body scroll, handle in main */
         }
 
-        .container {
-            width: 100%;
-            max-width: 800px;
-            padding: 2rem;
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            flex-shrink: 0;
         }
 
-        header {
+        .brand {
+            font-size: 1.5rem;
+            font-weight: 700;
             margin-bottom: 2rem;
-            text-align: center;
-        }
-
-        h1 {
-            font-size: 2rem;
-            margin: 0 0 0.5rem 0;
             background: linear-gradient(to right, #38bdf8, #818cf8);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
         }
 
-        p.subtitle {
-            color: var(--text-secondary);
+        .nav-menu {
+            list-style: none;
+            padding: 0;
             margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
         }
 
+        .nav-item {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(56, 189, 248, 0.1);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background-color: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 2rem 3rem;
+            max-width: 1200px;
+            /* Wider/Clean constraint */
+            margin: 0 auto;
+        }
+
+        .view-section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Card & Utility Styles */
         .card {
             background-color: var(--card-bg);
             border: 1px solid var(--border);
@@ -62,12 +127,15 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
-        .card h2 {
+        h2 {
             margin-top: 0;
-            font-size: 1.25rem;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 0.75rem;
-            margin-bottom: 1rem;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            color: var(--text-primary);
         }
 
         .status-indicator {
@@ -94,6 +162,7 @@
             background-color: var(--error);
         }
 
+        /* Form Styles */
         .form-group {
             margin-bottom: 1rem;
         }
@@ -106,19 +175,18 @@
         }
 
         input,
-        select,
-        textarea {
+        select {
             width: 100%;
             padding: 0.75rem;
             background-color: var(--bg-color);
             border: 1px solid var(--border);
             border-radius: 6px;
             color: var(--text-primary);
-            font-family: inherit;
             box-sizing: border-box;
         }
 
-        input:focus {
+        input:focus,
+        select:focus {
             outline: none;
             border-color: var(--accent);
         }
@@ -131,8 +199,8 @@
             border-radius: 6px;
             font-weight: 600;
             cursor: pointer;
-            transition: opacity 0.2s;
             width: 100%;
+            transition: opacity 0.2s;
         }
 
         button:hover {
@@ -144,207 +212,269 @@
             cursor: not-allowed;
         }
 
+        /* Console Grid */
+        .console-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            height: 600px;
+            /* Fixed height for console view */
+        }
+
         #logs {
             font-family: 'Fira Code', monospace;
             background-color: #000;
             padding: 1rem;
             border-radius: 6px;
             color: #10b981;
-            min-height: 150px;
-            max-height: 300px;
+            height: 100%;
             overflow-y: auto;
             white-space: pre-wrap;
             font-size: 0.85rem;
             border: 1px solid var(--border);
+            box-sizing: border-box;
         }
 
-        .api-key-banner {
-            background-color: rgba(56, 189, 248, 0.1);
-            border: 1px solid var(--accent);
-            color: var(--accent);
-            padding: 0.75rem;
-            border-radius: 6px;
-            margin-bottom: 1.5rem;
-            font-size: 0.9rem;
-            text-align: center;
-        }
-
-        /* Console Grid */
-        .console-grid {
+        /* Integration Grid */
+        .integration-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
+            gap: 2rem;
         }
 
-        @media (max-width: 768px) {
-            .console-grid {
+        .code-block {
+            background: #0f172a;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid #334155;
+        }
+
+        pre {
+            margin: 0;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+            font-family: 'Fira Code', monospace;
+            line-height: 1.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            body {
+                flex-direction: column;
+                overflow: auto;
+            }
+
+            .sidebar {
+                width: 100%;
+                flex-direction: row;
+                padding: 1rem;
+                align-items: center;
+                justify-content: space-between;
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                border-bottom: 1px solid var(--border);
+                border-right: none;
+            }
+
+            .brand {
+                margin-bottom: 0;
+                font-size: 1.25rem;
+            }
+
+            .nav-menu {
+                flex-direction: row;
+            }
+
+            .nav-item {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.9rem;
+            }
+
+            .main-content {
+                padding: 1.5rem;
+                height: auto;
+                overflow: visible;
+            }
+
+            .console-grid,
+            .integration-grid {
                 grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            #logs {
+                min-height: 300px;
             }
         }
-
-        /* Tabs removed */
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <header>
-            <h1>ATLAS Governance Gateway</h1>
-            <p class="subtitle">Secure MCP Middleware with Human-in-the-Loop Governance</p>
-        </header>
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="brand">ATLAS Gateway</div>
+        <ul class="nav-menu">
+            <li class="nav-item active" onclick="switchView('dashboard', this)">
+                <span>📊</span> Dashboard
+            </li>
+            <li class="nav-item" onclick="switchView('console', this)">
+                <span>💻</span> Test Console
+            </li>
+            <li class="nav-item" onclick="switchView('integration', this)">
+                <span>🔌</span> Integration
+            </li>
+            <li class="nav-item" onclick="switchView('docs', this)">
+                <span>📚</span> Documentation
+            </li>
+        </ul>
 
-        <div class="card">
-            <h2>System Health</h2>
-            <div class="status-indicator">
-                <div class="dot" id="health-dot"></div>
-                <span id="health-text">Checking connection...</span>
+        <!-- Status Footer in Sidebar for Desktop -->
+        <div style="margin-top: auto; padding-top: 2rem; display: none;">
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                Status: <span id="sidebar-status" style="color: var(--success);">Online</span>
             </div>
-            <div style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary);">
-                <div><strong>Inngest:</strong> <span id="inngest-status">Unknown</span></div>
-                <div><strong>Modal SLM:</strong> <span id="modal-status">Unknown</span></div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+        <!-- VIEW 1: DASHBOARD -->
+        <div id="view-dashboard" class="view-section active">
+            <header style="margin-bottom: 2rem;">
+                <h1>System Overview</h1>
+                <p style="color: var(--text-secondary);">Real-time status of the ATLAS Governance Gateway.</p>
+            </header>
+
+            <div class="card">
+                <h2>Health Status</h2>
+                <div class="status-indicator" style="margin-bottom: 1.5rem;">
+                    <div class="dot" id="health-dot"></div>
+                    <span id="health-text" style="font-size: 1.1rem;">Checking connection...</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div
+                        style="background: rgba(15, 23, 42, 0.5); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Inngest
+                            Cloud</div>
+                        <div id="inngest-status" style="font-weight: 600; color: var(--text-primary);">Unknown</div>
+                    </div>
+                    <div
+                        style="background: rgba(15, 23, 42, 0.5); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Modal SLM
+                            Infrastructure</div>
+                        <div id="modal-status" style="font-weight: 600; color: var(--text-primary);">Unknown</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="background: linear-gradient(145deg, #1e293b, #0f172a);">
+                <h2>Quick Actions</h2>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <button onclick="switchView('console', document.querySelectorAll('.nav-item')[1])"
+                        style="width: auto;">Open Test Console</button>
+                    <button onclick="switchView('integration', document.querySelectorAll('.nav-item')[2])"
+                        style="background: transparent; border: 1px solid var(--border); color: var(--text-primary); width: auto;">View
+                        Setup Guide</button>
+                </div>
             </div>
         </div>
 
-        <div class="console-grid">
-            <!-- Left: Test Console -->
-            <div class="card" style="margin-bottom: 0;">
-                <h2>Test Console</h2>
-                <div class="form-group">
-                    <label>API Key (Required)</label>
-                    <input type="password" id="api-key" placeholder="Enter ATLAS_API_KEY">
-                </div>
-                <div class="form-group">
-                    <label>Test Scenario</label>
-                    <select id="scenario">
-                        <option value="check_payment">Check Payment Status (Low Risk)</option>
-                        <option value="request_extension">Request Payment Extension (High Risk)</option>
-                        <option value="approve_scenario">Scenario: Approve (Low Risk)</option>
-                        <option value="deny_scenario">Scenario: Deny (High Income)</option>
-                        <option value="escalate_scenario">Scenario: Escalate (ID Mismatch)</option>
-                    </select>
-                </div>
-                <button onclick="runTest()" id="test-btn">Run Test</button>
-            </div>
+        <!-- VIEW 2: CONSOLE -->
+        <div id="view-console" class="view-section">
+            <header style="margin-bottom: 1.5rem;">
+                <h1>Test Console</h1>
+                <p style="color: var(--text-secondary);">Simulate Agent interactions and view live responses.</p>
+            </header>
 
-            <!-- Right: Response Log -->
-            <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column;">
-                <h2>Response Log</h2>
-                <div id="logs" style="flex-grow: 1;">// Waiting for action...</div>
+            <div class="console-grid">
+                <!-- Left: Controls -->
+                <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column;">
+                    <h2>Configuration</h2>
+                    <div class="form-group">
+                        <label>API Key (Required)</label>
+                        <input type="password" id="api-key" placeholder="Enter ATLAS_API_KEY">
+                    </div>
+                    <div class="form-group">
+                        <label>Test Scenario</label>
+                        <select id="scenario">
+                            <option value="check_payment">Check Payment Status (Low Risk)</option>
+                            <option value="request_extension">Request Payment Extension (High Risk)</option>
+                            <option value="approve_scenario">Scenario: Approve (Low Risk)</option>
+                            <option value="deny_scenario">Scenario: Deny (High Income)</option>
+                            <option value="escalate_scenario">Scenario: Escalate (ID Mismatch)</option>
+                        </select>
+                    </div>
+                    <div style="margin-top: auto;">
+                        <button onclick="runTest()" id="test-btn">Run Test</button>
+                    </div>
+                </div>
+
+                <!-- Right: Logs -->
+                <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column;">
+                    <h2>Response Log</h2>
+                    <div id="logs">// Waiting for action...</div>
+                </div>
             </div>
         </div>
 
-    </div>
+        <!-- VIEW 3: INTEGRATION -->
+        <div id="view-integration" class="view-section">
+            <header style="margin-bottom: 2rem;">
+                <h1>Integration Guide</h1>
+                <p style="color: var(--text-secondary);">Setup instructions for AI Agents and Sara's Portal.</p>
+            </header>
 
-    <div class="container"> <!-- Wrapped Integration Guide in new container for spacing if needed, or just keep flow -->
-        <div class="card" style="margin-bottom: 2rem;">
-            <h2>Integration Guide & MCP Schema</h2>
-            <p class="subtitle">How to connect an AI Agent to the ATLAS Governance Gateway.</p>
-
-            <style>
-                /* ... existing styles ... */
-                .grid-container {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 2rem;
-                    margin-top: 2rem;
-                }
-
-                @media (max-width: 768px) {
-                    .grid-container {
-                        grid-template-columns: 1fr;
-                    }
-                }
-
-                .tool-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                    gap: 1.5rem;
-                    margin-top: 1rem;
-                }
-            </style>
-
-            <div class="grid-container">
-                <!-- Left Column: Setup Instructions -->
+            <div class="integration-grid">
+                <!-- Client Setup -->
                 <div>
                     <h3>1. Client Agent Setup</h3>
-
-                    <div style="margin-bottom: 2rem;">
-                        <h4 style="color: #cbd5e1; margin-bottom: 0.5rem;">🤖 AI Agent (Claude/Cursor)</h4>
-                        <p style="font-size: 0.9rem; color: #94a3b8;">Add this to
-                            <code>claude_desktop_config.json</code> to
-                            give your Agent access to these tools.
-                        </p>
-                        <div style="background: #0f172a; padding: 1rem; border-radius: 6px; overflow-x: auto;">
-                            <pre style="margin: 0; font-size: 0.75rem; color: #cbd5e1;">
+                    <div class="card">
+                        <h4 style="color: #cbd5e1; margin-bottom: 0.5rem; margin-top:0;">🤖 AI Agent (Claude/Cursor)
+                        </h4>
+                        <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem;">Add this to
+                            <code>claude_desktop_config.json</code>:</p>
+                        <div class="code-block">
+                            <pre>
 "atlas-gateway": {
   "command": "npx",
   "args": [
     "-y",
     "@modelcontextprotocol/server-sse",
     "--url", "https://atlas-mcp-gateway-vercel.vercel.app/mcp/sse",
-    "--header", "Authorization: Bearer &lt;YOUR_KEY&gt;"
+    "--header", "Authorization: Bearer <YOUR_KEY>"
   ]
 }</pre>
                         </div>
                     </div>
-
-
-
-                    <!-- Right Column: Architecture Diagram -->
-                    <div>
-                        <h3>2. System Architecture</h3>
-                        <div class="diagram-container"
-                            style="background: #1e293b00; padding: 0.5rem; border-radius: 6px; text-align: center; height: 100%;">
-                            <div class="mermaid">
-                                graph TD
-                                Agent([🤖 AI Agent])
-                                Gateway{ATLAS Gateway}
-                                Brain([🧠 Modal SLM])
-                                Inngest[⚡ Inngest Workflow]
-                                Human([👤 Sara's Portal])
-
-                                Agent ==>|MCP Tools| Gateway
-                                Gateway -.->|1. Risk Check| Brain
-                                Gateway ==>|2. Trigger Event| Inngest
-                                Inngest -.->|3. Request Approval| Human
-                                Human ==x|4. Webhook Decision| Inngest
-
-                                style Agent fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-                                style Gateway fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
-                                style Brain fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-                                style Inngest fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
-                                style Human fill:#ef4444,stroke:#b91c1c,stroke-width:2px,color:#fff
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
-                <!-- Full Width Row: Sara's Portal (HITL) -->
-                <div
-                    style="background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 2rem; margin-bottom: 3rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);">
-                    <div style="border-bottom: 1px solid #1e293b; padding-bottom: 1rem; margin-bottom: 1.5rem;">
-                        <h3 style="margin: 0; color: #f8fafc; display: flex; align-items: center; gap: 0.75rem;">
-                            <span>👤</span> 3. Sara's Portal Integration (HITL)
-                        </h3>
-                        <p style="margin: 0.5rem 0 0 0; color: #94a3b8; font-size: 0.95rem;">
-                            The Portal listens for "High Risk" events (e.g., extensions, welfare changes) and allows a
-                            human to Approve or Reject them.
+                <!-- Sara's Portal Title Block -->
+                <div style="display: flex; flex-direction: column; justify-content: center;">
+                    <div class="card" style="border-left: 4px solid #38bdf8;">
+                        <h3 style="margin-top: 0;">👤 Sara's Portal (HITL)</h3>
+                        <p style="color: #cbd5e1; font-size: 0.95rem;">
+                            The "Human-in-the-Loop" portal listens for High Risk events and provides manual approvals
+                            using Inngest.
                         </p>
                     </div>
+                </div>
+            </div>
 
-                    <div class="grid-container"
-                        style="gap: 2rem; margin-top: 0; display: grid; grid-template-columns: 1fr 1fr;">
-                        <!-- Listen -->
-                        <div>
-                            <div
-                                style="font-size: 0.75rem; color: #38bdf8; margin-bottom: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
-                                Step 1: Listen (Inngest)
-                            </div>
-                            <div
-                                style="background: #1e293b; padding: 1.25rem; border-radius: 8px; border: 1px solid #334155; overflow-x: auto;">
-                                <pre
-                                    style="margin: 0; font-size: 0.75rem; color: #cbd5e1; font-family: 'Fira Code', monospace; line-height: 1.6;">
+            <!-- Full Width Sara's Portal Code -->
+            <div class="card" style="margin-top: 1.5rem;">
+                <h3>2. Sara's Portal Integration Code</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <!-- Listen -->
+                    <div>
+                        <div
+                            style="font-size: 0.75rem; color: #38bdf8; margin-bottom: 0.5rem; font-weight: 700; text-transform: uppercase;">
+                            Step 1: Listen (Inngest)</div>
+                        <div class="code-block">
+                            <pre>
 inngest.createFunction(
   { id: "human-approval" },
   { event: "<span style="color: #38bdf8;">atlas/tool.execution_requested</span>" },
@@ -362,19 +492,16 @@ inngest.createFunction(
     return decision;
   }
 );</pre>
-                            </div>
                         </div>
+                    </div>
 
-                        <!-- Respond -->
-                        <div>
-                            <div
-                                style="font-size: 0.75rem; color: #4ade80; margin-bottom: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
-                                Step 2: Respond (Webhook)
-                            </div>
-                            <div
-                                style="background: #1e293b; padding: 1.25rem; border-radius: 8px; border: 1px solid #334155; overflow-x: auto;">
-                                <pre
-                                    style="margin: 0; font-size: 0.75rem; color: #cbd5e1; font-family: 'Fira Code', monospace; line-height: 1.6;">
+                    <!-- Respond -->
+                    <div>
+                        <div
+                            style="font-size: 0.75rem; color: #4ade80; margin-bottom: 0.5rem; font-weight: 700; text-transform: uppercase;">
+                            Step 2: Respond (Webhook)</div>
+                        <div class="code-block">
+                            <pre>
 // POST /webhook/approval
 await fetch("<span style="color: #4ade80;">.../webhook/approval</span>", {
   method: "POST",
@@ -388,223 +515,173 @@ await fetch("<span style="color: #4ade80;">.../webhook/approval</span>", {
     notes: "Verified documents."
   })
 });</pre>
-                            </div>
                         </div>
                     </div>
                 </div>
-
-                <div style="margin-top: 3rem;">
-                    <h3>4. Available Tools & Usage Context</h3>
-                    <p style="color: #94a3b8; margin-bottom: 1.5rem;">These tools are exposed to the AI Agent via MCP.
-                        The
-                        Agent
-                        calls them based on the user's conversation.</p>
-
-                    <div class="tool-grid">
-                        <!-- Tool 1 -->
-                        <div class="tool-card"
-                            style="border-left: 4px solid #10b981; padding: 1.5rem; background: #1e293b; border-radius: 8px;">
-                            <h4 style="color: #10b981; margin-top: 0;">check_payment_status</h4>
-                            <p style="font-size: 0.85rem; color: #cbd5e1;"><strong>🔍 When to use:</strong> The Agent
-                                calls
-                                this
-                                when a user asks "Where is my payment?" or "Check my history".</p>
-                            <p style="font-size: 0.85rem; color: #94a3b8;">Because this is a <strong>READ</strong>
-                                operation,
-                                the Gateway auto-approves it (Low Risk).</p>
-                            <pre
-                                style="background: #0f172a; padding: 0.75rem; border-radius: 4px; font-size: 0.75rem; color: #cbd5e1; margin-top: 1rem;">
-{
-  "name": "check_payment_status",
-  "arguments": { "beneficiary_id": "string" }
-}</pre>
-                        </div>
-
-                        <!-- Tool 2 -->
-                        <div class="tool-card"
-                            style="border-left: 4px solid #f59e0b; padding: 1.5rem; background: #1e293b; border-radius: 8px;">
-                            <h4 style="color: #f59e0b; margin-top: 0;">request_payment_extension</h4>
-                            <p style="font-size: 0.85rem; color: #cbd5e1;"><strong>⚠️ When to use:</strong> The Agent
-                                calls
-                                this
-                                if a user says "I can't pay on time" or "I need more time".</p>
-                            <p style="font-size: 0.85rem; color: #94a3b8;">This is a <strong>High Risk</strong> action.
-                                The
-                                Gateway will pause and trigger the Governance Workflow.</p>
-                            <pre
-                                style="background: #0f172a; padding: 0.75rem; border-radius: 4px; font-size: 0.75rem; color: #cbd5e1; margin-top: 1rem;">
-{
-  "name": "request_payment_extension",
-  "arguments": { 
-    "beneficiary_id": "string", 
-    "reason": "string" 
-  }
-}</pre>
-                        </div>
-
-                        <!-- Tool 3 -->
-                        <div class="tool-card"
-                            style="border-left: 4px solid #ef4444; padding: 1.5rem; background: #1e293b; border-radius: 8px;">
-                            <h4 style="color: #ef4444; margin-top: 0;">modify_welfare_record</h4>
-                            <p style="font-size: 0.85rem; color: #cbd5e1;"><strong>🚨 When to use:</strong> The Agent
-                                calls
-                                this
-                                to change sensitive data (e.g., "Update my income" or "Change address").</p>
-                            <p style="font-size: 0.85rem; color: #94a3b8;"><strong>Critical Risk:</strong> Always
-                                requires
-                                explicit Human Approval via Sara's Portal.</p>
-                            <pre
-                                style="background: #0f172a; padding: 0.75rem; border-radius: 4px; font-size: 0.75rem; color: #cbd5e1; margin-top: 1rem;">
-{
-  "name": "modify_welfare_record",
-  "arguments": { 
-    "beneficiary_id": "string", 
-    "changes": "object" 
-  }
-}</pre>
-                        </div>
-                    </div>
-                </div>
-                <div style="margin-top: 3rem;">
-                    <h3>4. Recommended System Prompt (Governance Compliance)</h3>
-                    <p style="color: #94a3b8; margin-bottom: 1.5rem;">To ensure your Client Agent complies with **NIST
-                        AI
-                        RMF**
-                        and the **EU AI Act**, paste this System Prompt into your Agent configuration.</p>
-
-                    <div
-                        style="background: #1e293b; border-left: 4px solid #38bdf8; padding: 1.5rem; border-radius: 8px;">
-                        <h4 style="color: #38bdf8; margin-top: 0; display: flex; align-items: center; gap: 0.5rem;">
-                            <span>🛡️</span> Governance-Enforced System Prompt
-                        </h4>
-                        <pre class="code-block" style="background: #0f172a; border: 1px solid #334155;">
-You are a Governance-Enforced AI Agent connecting to the ATLAS Gateway.
-
-### CORE DIRECTIVES
-
-1.  **NIST AI RMF (Measure Function)**:
-    -   You must **QUANTIFY** risk in your internal reasoning before calling tools.
-    -   *Constraint*: Output a risk assessment for every intent:
-        `measure: { "risk_level": "LOW" | "HIGH" | "CRITICAL", "confidence": 0.0-1.0 }`
-
-2.  **EU AI Act (Article 14 - Human Oversight)**:
-    -   You are **PROHIBITED** from autonomously finalizing high-impact decisions (e.g., denying benefits, reducing aid) without human review.
-    -   If `risk_level` is HIGH or CRITICAL, or if `confidence` &lt; 0.9, you MUST flag the case for **ESCALATE**.
-    -   *Action*: Trigger the `request_payment_extension` (High Risk) or `modify_welfare_record` (Critical) tools to delegate to the Human Portal.
-
-### OPERATIONAL RULES
--   **Low Risk**: Use `check_payment_status` freely for information retrieval.
--   **High Risk**: Use `request_payment_extension` only if directly requested. This pauses execution for governance.
--   **Critical**: Use `modify_welfare_record` ONLY for factual corrections. This LOCKS the workflow until Human Approval is received via Webhook.
-</pre>
-                    </div>
-                </div>
-
             </div>
-
-            <!-- Load Mermaid.js -->
-            <script type="module">
-                import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-                mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
-            </script>
-
-
         </div>
 
-        <script>
-            const BASE_URL = window.location.origin;
+        <!-- VIEW 4: DOCUMENTATION -->
+        <div id="view-docs" class="view-section">
+            <header style="margin-bottom: 2rem;">
+                <h1>System Documentation</h1>
+                <p style="color: var(--text-secondary);">Architecture, Tools, and Governance Standards.</p>
+            </header>
 
-            function openTab(evt, tabName) {
-                var i, tabcontent, tablinks;
-                tabcontent = document.getElementsByClassName("tab-content");
-                for (i = 0; i < tabcontent.length; i++) {
-                    tabcontent[i].style.display = "none";
-                    tabcontent[i].classList.remove("active");
-                }
-                tablinks = document.getElementsByClassName("tab-btn");
-                for (i = 0; i < tablinks.length; i++) {
-                    tablinks[i].className = tablinks[i].className.replace(" active", "");
-                }
-                document.getElementById(tabName).style.display = "block";
-                // Trigger reflow
-                void document.getElementById(tabName).offsetWidth;
-                document.getElementById(tabName).classList.add("active");
-                evt.currentTarget.className += " active";
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <!-- Architecture -->
+                <div>
+                    <h3>1. System Architecture</h3>
+                    <div class="card"
+                        style="height: 400px; display: flex; align-items: center; justify-content: center;">
+                        <div class="mermaid">
+                            graph TD
+                            Agent([🤖 AI Agent])
+                            Gateway{ATLAS}
+                            Brain([🧠 Modal SLM])
+                            Inngest[⚡ Inngest]
+                            Human([👤 Portal])
+
+                            Agent ==>|Tools| Gateway
+                            Gateway -.->|Risk?| Brain
+                            Gateway ==>|Trigger| Inngest
+                            Inngest -.->|Approval| Human
+                            Human ==x|Webhook| Inngest
+
+                            style Agent fill:#3b82f6,stroke:#1d4ed8
+                            style Gateway fill:#8b5cf6,stroke:#6d28d9
+                            style Brain fill:#10b981,stroke:#047857
+                            style Inngest fill:#f59e0b,stroke:#b45309
+                            style Human fill:#ef4444,stroke:#b91c1c
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Prompt -->
+                <div>
+                    <h3>2. Governance Compliance</h3>
+                    <div class="card" style="border-left: 4px solid #38bdf8; height: 400px; overflow-y: auto;">
+                        <h4 style="color: #38bdf8; margin-top: 0;">🛡️ NIST & EU AI Act Prompt</h4>
+                        <div class="code-block">
+                            <pre style="white-space: pre-wrap;">
+### CORE DIRECTIVES
+
+1. **NIST AI RMF (Measure Function)**:
+   - You must **QUANTIFY** risk in your internal reasoning.
+   - Output `measure: { "risk_level": "LOW" | "HIGH" }`.
+
+2. **EU AI Act (Article 14)**:
+   - **PROHIBITED** from autonomously finalizing high-impact decisions.
+   - If `risk_level` is HIGH, trigger `request_payment_extension`.
+</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 2rem;">3. Available Tools Reference</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                <!-- Tool Cards from before -->
+                <div class="card" style="border-left: 4px solid #10b981;">
+                    <h4 style="color: #10b981; margin-top: 0;">check_payment_status</h4>
+                    <p style="font-size: 0.85rem; color: #cbd5e1;"><strong>🔍 Low Risk</strong>: Auto-approved read
+                        operation.</p>
+                </div>
+                <div class="card" style="border-left: 4px solid #f59e0b;">
+                    <h4 style="color: #f59e0b; margin-top: 0;">request_payment_extension</h4>
+                    <p style="font-size: 0.85rem; color: #cbd5e1;"><strong>⚠️ High Risk</strong>: Triggers Governance
+                        Workflow.</p>
+                </div>
+                <div class="card" style="border-left: 4px solid #ef4444;">
+                    <h4 style="color: #ef4444; margin-top: 0;">modify_welfare_record</h4>
+                    <p style="font-size: 0.85rem; color: #cbd5e1;"><strong>🚨 Critical Risk</strong>: Strictly
+                        Human-in-the-Loop only.</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Scripts -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+    </script>
+
+    <script>
+        const BASE_URL = window.location.origin;
+
+        // View Switching Logic
+        function switchView(viewName, navItem) {
+            // 1. Hide all views
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+
+            // 2. Show target view
+            document.getElementById('view-' + viewName).classList.add('active');
+
+            // 3. Update Nav State
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if (navItem) {
+                navItem.classList.add('active');
+            } else {
+                // Find by text if passed via button
             }
+        }
 
-            async function checkHealth() {
-                try {
-                    const res = await fetch(`${BASE_URL}/health`);
-                    const data = await res.json();
+        async function checkHealth() {
+            try {
+                const res = await fetch(`${BASE_URL}/health`);
+                const data = await res.json();
+                const dot = document.getElementById('health-dot');
+                const text = document.getElementById('health-text');
 
-                    const dot = document.getElementById('health-dot');
-                    const text = document.getElementById('health-text');
-
-                    if (data.status && data.status.includes("ATLAS")) {
-                        dot.classList.add('active');
-                        dot.classList.remove('error');
-                        text.textContent = data.status; // Show the actual status message
-                        document.getElementById('inngest-status').textContent = "Active";
-                        document.getElementById('modal-status').textContent = "Connected";
-                    } else {
-                        throw new Error('Invalid status: ' + data.status);
-                    }
-                } catch (e) {
-                    const dot = document.getElementById('health-dot');
-                    const text = document.getElementById('health-text');
-                    dot.classList.remove('active');
-                    dot.classList.add('error');
-                    text.textContent = "Offline / Connection Failed";
-                    console.error(e);
-                }
+                if (data.status && data.status.includes("ATLAS")) {
+                    dot.classList.add('active');
+                    dot.classList.remove('error');
+                    text.textContent = "System Operational";
+                    document.getElementById('inngest-status').textContent = "Active";
+                    document.getElementById('modal-status').textContent = "Connected";
+                } else { throw new Error(data.status); }
+            } catch (e) {
+                document.getElementById('health-dot').classList.add('error');
+                document.getElementById('health-text').textContent = "Offline";
+                console.error(e);
             }
+        }
 
-            async function runTest() {
-                const btn = document.getElementById('test-btn');
-                const logs = document.getElementById('logs');
-                const apiKey = document.getElementById('api-key').value;
-                const scenario = document.getElementById('scenario').value;
+        async function runTest() {
+            const btn = document.getElementById('test-btn');
+            const logs = document.getElementById('logs');
+            const apiKey = document.getElementById('api-key').value;
+            const scenario = document.getElementById('scenario').value;
 
-                if (!apiKey) {
-                    alert("Please enter your API Key.");
-                    return;
-                }
+            if (!apiKey) { alert("Please enter your API Key."); return; }
 
-                btn.disabled = true;
-                btn.textContent = "Running...";
-                logs.innerText = `> Initializing request for ${scenario}...\n`;
+            btn.disabled = true;
+            btn.textContent = "Running...";
+            logs.innerText = `> Initializing request for ${scenario}...\n`;
 
-                try {
-                    // We use a special test endpoint that simulates the MCP tool call via HTTP for the UI
-                    const res = await fetch(`${BASE_URL}/api/test-tool`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${apiKey}`
-                        },
-                        body: JSON.stringify({ tool: scenario })
-                    });
+            try {
+                const res = await fetch(`${BASE_URL}/api/test-tool`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                    body: JSON.stringify({ tool: scenario })
+                });
 
-                    const data = await res.json();
-                    const timestamp = new Date().toLocaleTimeString();
-
-                    if (res.ok) {
-                        logs.innerText += `> [${timestamp}] Success:\n${JSON.stringify(data, null, 2)}\n`;
-                    } else {
-                        logs.innerText += `> [${timestamp}] Error (${res.status}):\n${JSON.stringify(data, null, 2)}\n`;
-                    }
-
-                } catch (e) {
-                    logs.innerText += `> Network Error: ${e.message}\n`;
-                } finally {
-                    btn.disabled = false;
-                    btn.textContent = "Run Test";
-                }
+                const data = await res.json();
+                const timestamp = new Date().toLocaleTimeString();
+                logs.innerText += `> [${timestamp}] ${res.ok ? 'Success' : 'Error'}:\n${JSON.stringify(data, null, 2)}\n`;
+            } catch (e) {
+                logs.innerText += `> Network Error: ${e.message}\n`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Run Test";
             }
+        }
 
-            // Init
-            checkHealth();
-        </script>
+        // Init
+        checkHealth();
+    </script>
 </body>
 
 </html>
