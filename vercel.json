@@ -2,14 +2,14 @@
     "version": 2,
     "builds": [
         {
-            "src": "gateway.py",
+            "src": "main.py",
             "use": "@vercel/python"
         }
     ],
     "routes": [
         {
             "src": "/(.*)",
-            "dest": "gateway.py"
+            "dest": "main.py"
         }
     ]
 }

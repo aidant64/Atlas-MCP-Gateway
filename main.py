@@ -238,7 +238,7 @@ from fastapi.responses import FileResponse
 
 app = FastAPI(title="ATLAS Governance Gateway")
 
-# Serve the visual homepage at root
+# Serve the visual homepage at root (Force Redeploy)
 @app.get("/")
 async def root():
     return FileResponse('static/index.html')
