@@ -233,15 +233,43 @@ async def modify_welfare_record(beneficiary_id: str, changes: Dict[str, Any], ct
 
 # Initialize FastAPI (Main Entry Point)
 from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 app = FastAPI(title="ATLAS Governance Gateway")
 
+# Serve the visual homepage at root
 @app.get("/")
 async def root():
+    return FileResponse('static/index.html')
+
+@app.get("/health")
+async def health_check():
     return {
         "status": "ATLAS Governance Gateway Running",
         "mcp_endpoint": "/mcp/sse",
         "inngest_endpoint": "/api/inngest"
     }
+
+import pydantic
+
+# Internal Test Endpoint for the Homepage Console
+class TestToolRequest(pydantic.BaseModel):
+    tool: str
+
+@app.post("/api/test-tool", dependencies=[Depends(verify_api_key)])
+async def test_tool_endpoint(req: TestToolRequest):
+    """
+    Internal endpoint to simulate tool calls for the homepage console.
+    """
+    if req.tool == "check_payment":
+        result = await check_payment_status_logic("test_user_123")
+        return {"result": result}
+    elif req.tool == "request_extension":
+        result = await request_payment_extension_logic("test_user_123", "Tested via Console")
+        return {"result": result}
+    else:
+        raise HTTPException(status_code=400, detail="Unknown test scenario")
 
 # Mount FastMCP server
 # This exposes the MCP tools at /mcp/sse and /mcp/messages

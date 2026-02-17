@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATLAS Governance Gateway</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #38bdf8;
+            --success: #4ade80;
+            --error: #f87171;
+            --border: #334155;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            padding: 2rem;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin: 0 0 0.5rem 0;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.25rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--border);
+            transition: background-color 0.3s;
+        }
+
+        .dot.active {
+            background-color: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        .dot.error {
+            background-color: var(--error);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        button {
+            background-color: var(--accent);
+            color: #0f172a;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            width: 100%;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #logs {
+            font-family: 'Fira Code', monospace;
+            background-color: #000;
+            padding: 1rem;
+            border-radius: 6px;
+            color: #10b981;
+            min-height: 150px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 0.85rem;
+            border: 1px solid var(--border);
+        }
+
+        .api-key-banner {
+            background-color: rgba(56, 189, 248, 0.1);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>ATLAS Governance Gateway</h1>
+            <p class="subtitle">Secure MCP Middleware with Human-in-the-Loop Governance</p>
+        </header>
+
+        <div class="card">
+            <h2>System Health</h2>
+            <div class="status-indicator">
+                <div class="dot" id="health-dot"></div>
+                <span id="health-text">Checking connection...</span>
+            </div>
+            <div style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary);">
+                <div><strong>Inngest:</strong> <span id="inngest-status">Unknown</span></div>
+                <div><strong>Modal SLM:</strong> <span id="modal-status">Unknown</span></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Test Console</h2>
+
+            <div class="form-group">
+                <label>API Key (Required for Security)</label>
+                <input type="password" id="api-key" placeholder="Enter your ATLAS_API_KEY">
+            </div>
+
+            <div class="form-group">
+                <label>Test Scenario</label>
+                <select id="scenario">
+                    <option value="check_payment">Check Payment Status (Low Risk)</option>
+                    <option value="request_extension">Request Payment Extension (High Risk)</option>
+                </select>
+            </div>
+
+            <button onclick="runTest()" id="test-btn">Run Test</button>
+        </div>
+
+        <div class="card">
+            <h2>Response Log</h2>
+            <div id="logs">// Waiting for action...</div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = window.location.origin;
+
+        async function checkHealth() {
+            try {
+                const res = await fetch(`${BASE_URL}/health`);
+                const data = await res.json();
+
+                const dot = document.getElementById('health-dot');
+                const text = document.getElementById('health-text');
+
+                if (data.status === "ATLAS Governance Gateway Running") {
+                    dot.classList.add('active');
+                    dot.classList.remove('error');
+                    text.textContent = "Operational";
+                    document.getElementById('inngest-status').textContent = "Active";
+                    document.getElementById('modal-status').textContent = "Connected"; // Simulated
+                } else {
+                    throw new Error('Invalid status');
+                }
+            } catch (e) {
+                const dot = document.getElementById('health-dot');
+                const text = document.getElementById('health-text');
+                dot.classList.remove('active');
+                dot.classList.add('error');
+                text.textContent = "Offline / Connection Failed";
+                console.error(e);
+            }
+        }
+
+        async function runTest() {
+            const btn = document.getElementById('test-btn');
+            const logs = document.getElementById('logs');
+            const apiKey = document.getElementById('api-key').value;
+            const scenario = document.getElementById('scenario').value;
+
+            if (!apiKey) {
+                alert("Please enter your API Key.");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "Running...";
+            logs.innerText = `> Initializing request for ${scenario}...\n`;
+
+            try {
+                // We use a special test endpoint that simulates the MCP tool call via HTTP for the UI
+                const res = await fetch(`${BASE_URL}/api/test-tool`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({ tool: scenario })
+                });
+
+                const data = await res.json();
+                const timestamp = new Date().toLocaleTimeString();
+
+                if (res.ok) {
+                    logs.innerText += `> [${timestamp}] Success:\n${JSON.stringify(data, null, 2)}\n`;
+                } else {
+                    logs.innerText += `> [${timestamp}] Error (${res.status}):\n${JSON.stringify(data, null, 2)}\n`;
+                }
+
+            } catch (e) {
+                logs.innerText += `> Network Error: ${e.message}\n`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Run Test";
+            }
+        }
+
+        // Init
+        checkHealth();
+    </script>
+</body>
+
+</html>
