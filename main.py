@@ -39,6 +39,39 @@ mcp = FastMCP("ATLAS_Hub")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ATLAS_Hub")
 
+# --- Security & Authentication ---
+from fastapi import Depends, HTTPException, Security, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+security = HTTPBearer()
+
+API_KEY = os.getenv("ATLAS_API_KEY")
+API_KEY_NAME = "Authorization"
+
+async def verify_api_key(credentials: HTTPAuthorizationCredentials = Security(security)):
+    """
+    Verifies the Bearer token against the ATLAS_API_KEY environment variable.
+    """
+    if not API_KEY:
+        # For initial deployment/testing, if no key is set, we might want to warn.
+        # But to be safe, we should probably fail. 
+        # However, to avoid "Server Error" on startup if user forgets env var, 
+        # let's log a warning and maybe allow or fail. 
+        # DECISION: Fail safe.
+        logger.error("ATLAS_API_KEY not set! Rejecting all requests.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Server configuration error: ATLAS_API_KEY not set"
+        )
+
+    if credentials.credentials != API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API Key",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return credentials.credentials
+
 
 class Decision(Enum):
     APPROVED = "APPROVED"
@@ -214,15 +247,27 @@ async def root():
 # This exposes the MCP tools at /mcp/sse and /mcp/messages
 try:
     # fastmcp.http_app returns a Starlette app. We force SSE transport.
+    # We must wrap this interaction to enforce auth.
+    # FastMCP doesn't natively support easy global dependencies on its internal app 
+    # without mounting it with dependencies in FastAPI.
+    
+    # Create a sub-application for MCP to apply dependencies
+    from fastapi import FastAPI
+    mcp_api_wrapper = FastAPI(dependencies=[Depends(verify_api_key)])
+    
     mcp_app = mcp.http_app(transport="sse")
-    app.mount("/mcp", mcp_app)
-    logger.info("Mounted FastMCP (SSE) at /mcp")
+    mcp_api_wrapper.mount("/", mcp_app)
+    
+    # Mount the wrapper
+    app.mount("/mcp", mcp_api_wrapper)
+    logger.info("Mounted FastMCP (SSE) at /mcp [Secured with API Key]")
 except Exception as e:
     logger.error(f"Failed to mount FastMCP: {e}")
 
 # Serve Inngest
 # For production, we must provide the signing_key to verify requests from Inngest Cloud.
 # signing_key is now handled in the Inngest client initialization in workflows.py
+# Inngest endpoint stays PUBLIC (secured by signature)
 inngest_serve(
     app, 
     inngest_client, 
@@ -230,7 +275,7 @@ inngest_serve(
 )
 
 # Webhook for Sarah (Mock Panel)
-@app.post("/webhook/approval")
+@app.post("/webhook/approval", dependencies=[Depends(verify_api_key)])
 async def approve_action(request: Request):
     """
     Simulates Sarah clicking 'Approve' on the dashboard.

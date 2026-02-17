@@ -5,7 +5,7 @@ langchain-ollama
 langchain-core
 inngest>=0.5.15
 fastapi
-uvicorn
+uvicorn[standard]
 python-multipart
 openai
-# Force Rebuild: Refresh dependencies
+requests
