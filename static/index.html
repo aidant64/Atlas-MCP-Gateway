@@ -321,12 +321,19 @@
             font-size: 0.85rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
             pointer-events: none;
-            /* Position relative to mouse is handled by JS, but fixed prevents page shift */
-            left: auto !important;
-            top: auto !important;
-            /* Attempt to center bottom or follow mouse if Mermaid uses inline styles */
         }
     </style>
+    <script>
+        // Force Mermaid Tooltip to follow mouse (Fixing top-left issue)
+        document.addEventListener('mousemove', (e) => {
+            const tooltip = document.querySelector('.mermaidTooltip');
+            if (tooltip && (tooltip.style.opacity > 0 || tooltip.style.display !== 'none')) {
+                // Use fixed positioning relative to viewport
+                tooltip.style.left = (e.clientX + 15) + 'px';
+                tooltip.style.top = (e.clientY + 15) + 'px';
+            }
+        });
+    </script>
 </head>
 
 <body>
