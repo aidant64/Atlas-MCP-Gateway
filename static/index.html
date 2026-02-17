@@ -331,9 +331,11 @@
         </ul>
 
         <!-- Status Footer in Sidebar for Desktop -->
-        <div style="margin-top: auto; padding-top: 2rem; display: none;">
-            <div style="font-size: 0.75rem; color: var(--text-secondary);">
-                Status: <span id="sidebar-status" style="color: var(--success);">Online</span>
+        <div style="margin-top: auto; padding-top: 2rem;">
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">SYSTEM STATUS</div>
+            <div class="status-indicator">
+                <div class="dot" id="global-health-dot"></div>
+                <span id="global-health-text" style="font-size: 0.9rem;">Checking...</span>
             </div>
         </div>
     </nav>
@@ -534,14 +536,14 @@ await fetch("<span style="color: #4ade80;">.../webhook/approval</span>", {
                 <div>
                     <h3>1. System Architecture</h3>
                     <div class="card"
-                        style="height: 400px; display: flex; align-items: center; justify-content: center; position: relative;">
+                        style="display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; padding-bottom: 1rem;">
                         <pre class="mermaid" style="background: transparent;">
                             graph TD
                             Agent[AI Agent]
                             Gateway{ATLAS Gateway}
-                            Brain([Modal SLM])
-                            Inngest[Inngest]
-                            Human([Sara Portal])
+                            Brain([Modal SLM*])
+                            Inngest[Inngest*]
+                            Human([Sara Portal*])
 
                             Agent -->|Tools| Gateway
                             Gateway -.->|Risk Analysis| Brain
@@ -554,8 +556,8 @@ await fetch("<span style="color: #4ade80;">.../webhook/approval</span>", {
                             click Human "https://cyber295atlas.app/" "Open Sara's Portal" _blank
                         </pre>
                         <div
-                            style="position: absolute; bottom: 10px; right: 10px; font-size: 0.75rem; color: var(--text-secondary); opacity: 0.8;">
-                            <span style="vertical-align: middle;">👆</span> Nodes with solid borders are clickable
+                            style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-secondary); border-top: 1px solid var(--border); padding-top: 0.5rem; width: 100%; text-align: center;">
+                            <strong>*</strong> Clickable Node (External Link)
                         </div>
                     </div>
                 </div>
@@ -645,19 +647,39 @@ await fetch("<span style="color: #4ade80;">.../webhook/approval</span>", {
             try {
                 const res = await fetch(`${BASE_URL}/health`);
                 const data = await res.json();
-                const dot = document.getElementById('health-dot');
-                const text = document.getElementById('health-text');
+
+                // Dashboard Dots
+                const dashDot = document.getElementById('health-dot');
+                const dashText = document.getElementById('health-text');
+                // Global Dots
+                const globalDot = document.getElementById('global-health-dot');
+                const globalText = document.getElementById('global-health-text');
 
                 if (data.status && data.status.includes("ATLAS")) {
-                    dot.classList.add('active');
-                    dot.classList.remove('error');
-                    text.textContent = "System Operational";
+                    [dashDot, globalDot].forEach(d => {
+                        d.classList.add('active');
+                        d.classList.remove('error');
+                    });
+                    dashText.textContent = "System Operational";
+                    globalText.textContent = "Operational";
+
                     document.getElementById('inngest-status').textContent = "Active";
                     document.getElementById('modal-status').textContent = "Connected";
                 } else { throw new Error(data.status); }
             } catch (e) {
-                document.getElementById('health-dot').classList.add('error');
-                document.getElementById('health-text').textContent = `Offline: ${e.message}`;
+                const dashDot = document.getElementById('health-dot');
+                const globalDot = document.getElementById('global-health-dot');
+                const dashText = document.getElementById('health-text');
+                const globalText = document.getElementById('global-health-text');
+
+                [dashDot, globalDot].forEach(d => {
+                    d.classList.add('error');
+                    d.classList.remove('active');
+                });
+
+                dashText.textContent = `Offline: ${e.message}`;
+                globalText.textContent = "Offline";
+
                 document.getElementById('inngest-status').textContent = "Unreachable";
                 document.getElementById('modal-status').textContent = "Unreachable";
                 console.error(e);
