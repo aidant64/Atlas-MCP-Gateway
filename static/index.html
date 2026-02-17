@@ -436,7 +436,8 @@
                         <h4 style="color: #cbd5e1; margin-bottom: 0.5rem; margin-top:0;">🤖 AI Agent (Claude/Cursor)
                         </h4>
                         <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem;">Add this to
-                            <code>claude_desktop_config.json</code>:</p>
+                            <code>claude_desktop_config.json</code>:
+                        </p>
                         <div class="code-block">
                             <pre>
 "atlas-gateway": {
@@ -546,7 +547,7 @@ await fetch("<span style="color: #4ade80;">.../webhook/approval</span>", {
                             Gateway -.->|Risk?| Brain
                             Gateway ==>|Trigger| Inngest
                             Inngest -.->|Approval| Human
-                            Human ==x|Webhook| Inngest
+                            Human -.->|Webhook| Inngest
 
                             style Agent fill:#3b82f6,stroke:#1d4ed8
                             style Gateway fill:#8b5cf6,stroke:#6d28d9
@@ -644,7 +645,9 @@ await fetch("<span style="color: #4ade80;">.../webhook/approval</span>", {
                 } else { throw new Error(data.status); }
             } catch (e) {
                 document.getElementById('health-dot').classList.add('error');
-                document.getElementById('health-text').textContent = "Offline";
+                document.getElementById('health-text').textContent = `Offline: ${e.message}`;
+                document.getElementById('inngest-status').textContent = "Unreachable";
+                document.getElementById('modal-status').textContent = "Unreachable";
                 console.error(e);
             }
         }
