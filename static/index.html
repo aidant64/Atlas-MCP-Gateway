@@ -537,23 +537,17 @@ await fetch("<span style="color: #4ade80;">.../webhook/approval</span>", {
                         style="height: 400px; display: flex; align-items: center; justify-content: center;">
                         <div class="mermaid">
                             graph TD
-                            Agent(["🤖 AI Agent"])
-                            Gateway{{"ATLAS Gateway"}}
-                            Brain(["🧠 Modal SLM"])
-                            Inngest["⚡ Inngest"]
-                            Human(["👤 Sara Portal"])
+                            Agent[AI Agent]
+                            Gateway{ATLAS Gateway}
+                            Brain([Modal SLM])
+                            Inngest[Inngest]
+                            Human([Sara Portal])
 
                             Agent -->|Tools| Gateway
                             Gateway -.->|Risk Analysis| Brain
                             Gateway -->|Trigger Event| Inngest
                             Inngest -.->|Wait for Approval| Human
                             Human -.->|Webhook Response| Inngest
-
-                            style Agent fill:#3b82f6,stroke:#1d4ed8
-                            style Gateway fill:#8b5cf6,stroke:#6d28d9
-                            style Brain fill:#10b981,stroke:#047857
-                            style Inngest fill:#f59e0b,stroke:#b45309
-                            style Human fill:#ef4444,stroke:#b91c1c
                         </div>
                     </div>
                 </div>
