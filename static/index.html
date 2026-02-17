@@ -226,14 +226,14 @@
                 const dot = document.getElementById('health-dot');
                 const text = document.getElementById('health-text');
 
-                if (data.status === "ATLAS Governance Gateway Running") {
+                if (data.status && data.status.includes("ATLAS")) {
                     dot.classList.add('active');
                     dot.classList.remove('error');
-                    text.textContent = "Operational";
+                    text.textContent = data.status; // Show the actual status message
                     document.getElementById('inngest-status').textContent = "Active";
-                    document.getElementById('modal-status').textContent = "Connected"; // Simulated
+                    document.getElementById('modal-status').textContent = "Connected";
                 } else {
-                    throw new Error('Invalid status');
+                    throw new Error('Invalid status: ' + data.status);
                 }
             } catch (e) {
                 const dot = document.getElementById('health-dot');
