@@ -168,6 +168,92 @@
             font-size: 0.9rem;
             text-align: center;
         }
+
+        /* Console Grid */
+        .console-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .console-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Tab Styles */
+        .tab-container {
+            margin-top: 1rem;
+            background: #1e293b;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .tab-header {
+            display: flex;
+            background: #0f172a;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+            width: auto;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: #1e293b;
+            opacity: 1;
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom: 2px solid var(--accent);
+            background: #1e293b;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 1.5rem;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .code-block {
+            background: #0f172a;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            margin: 0;
+            white-space: pre-wrap;
+        }
     </style>
 </head>
 
@@ -190,67 +276,99 @@
             </div>
         </div>
 
-        <div class="card">
-            <h2>Test Console</h2>
-
-            <div class="form-group">
-                <label>API Key (Required for Security)</label>
-                <input type="password" id="api-key" placeholder="Enter your ATLAS_API_KEY">
+        <div class="console-grid">
+            <!-- Left: Test Console -->
+            <div class="card" style="margin-bottom: 0;">
+                <h2>Test Console</h2>
+                <div class="form-group">
+                    <label>API Key (Required)</label>
+                    <input type="password" id="api-key" placeholder="Enter ATLAS_API_KEY">
+                </div>
+                <div class="form-group">
+                    <label>Test Scenario</label>
+                    <select id="scenario">
+                        <option value="check_payment">Check Payment Status (Low Risk)</option>
+                        <option value="request_extension">Request Payment Extension (High Risk)</option>
+                        <option value="approve_scenario">Scenario: Approve (Low Risk)</option>
+                        <option value="deny_scenario">Scenario: Deny (High Income)</option>
+                        <option value="escalate_scenario">Scenario: Escalate (ID Mismatch)</option>
+                    </select>
+                </div>
+                <button onclick="runTest()" id="test-btn">Run Test</button>
             </div>
 
-            <div class="form-group">
-                <label>Test Scenario</label>
-                <select id="scenario">
-                    <option value="check_payment">Check Payment Status (Low Risk)</option>
-                    <option value="request_extension">Request Payment Extension (High Risk)</option>
-                    <option value="approve_scenario">Scenario: Approve (Low Risk)</option>
-                    <option value="deny_scenario">Scenario: Deny (High Income)</option>
-                    <option value="escalate_scenario">Scenario: Escalate (ID Mismatch)</option>
-                </select>
+            <!-- Right: Response Log -->
+            <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column;">
+                <h2>Response Log</h2>
+                <div id="logs" style="flex-grow: 1;">// Waiting for action...</div>
             </div>
-
-            <button onclick="runTest()" id="test-btn">Run Test</button>
         </div>
 
         <div class="card" style="margin-bottom: 2rem;">
             <h2>API Documentation & Usage</h2>
-            <p class="subtitle">You can test the Risk Engine using the console above, or by sending requests directly.
-            </p>
+            <p class="subtitle">Use these OLLAMA prompts to test the Risk Engine logic locally.</p>
 
-            <div style="margin-top: 1.5rem;">
-                <h3>OLLAMA Scenario 1: Approve</h3>
-                <pre
-                    style="background: #1e293b; color: #cbd5e1; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.85rem;">
+            <div class="tab-container">
+                <div class="tab-header">
+                    <button class="tab-btn active" onclick="openTab(event, 'scenario-approve')">✅ Approve
+                        Scenario</button>
+                    <button class="tab-btn" onclick="openTab(event, 'scenario-deny')">❌ Deny Scenario</button>
+                    <button class="tab-btn" onclick="openTab(event, 'scenario-escalate')">⚠️ Escalate Scenario</button>
+                </div>
+
+                <!-- Tab 1: Approve -->
+                <div id="scenario-approve" class="tab-content active">
+                    <div style="margin-bottom: 0.5rem; color: var(--success); font-weight: bold;">Low Risk • Unemployed
+                        • Verified Income</div>
+                    <pre class="code-block">
 ### Instruction:
 Evaluate the unemployment benefit application risk.
 
 ### Input:
-{"structured_inputs": {"employment_status_declared": "unemployed", "income_verification": "verified", "identity_check": "pass"}, "decision_context": {"case_age_days": 14, "risk_score_initial": 0.1}}
-</pre>
-            </div>
+{
+  "structured_inputs": {
+    "employment_status_declared": "unemployed",
+    "income_verification": "verified_low",
+    "historical_claims_count": 0
+  }
+}</pre>
+                </div>
 
-            <div style="margin-top: 1.5rem;">
-                <h3>OLLAMA Scenario 2: Deny</h3>
-                <pre
-                    style="background: #1e293b; color: #cbd5e1; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.85rem;">
+                <!-- Tab 2: Deny -->
+                <div id="scenario-deny" class="tab-content">
+                    <div style="margin-bottom: 0.5rem; color: var(--error); font-weight: bold;">High Risk • Employed •
+                        High Income</div>
+                    <pre class="code-block">
 ### Instruction:
 Evaluate the unemployment benefit application risk.
 
 ### Input:
-{"structured_inputs": {"employment_status_declared": "employed_full_time", "income_verification": "verified_high_income"}, "decision_context": {"case_age_days": 2, "policy_rule": "income_threshold_exceeded"}}
-</pre>
-            </div>
+{
+  "structured_inputs": {
+    "employment_status_declared": "employed",
+    "income_verification": "verified_high",
+    "historical_claims_count": 5
+  }
+}</pre>
+                </div>
 
-            <div style="margin-top: 1.5rem;">
-                <h3>OLLAMA Scenario 3: Escalate</h3>
-                <pre
-                    style="background: #1e293b; color: #cbd5e1; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.85rem;">
+                <!-- Tab 3: Escalate -->
+                <div id="scenario-escalate" class="tab-content">
+                    <div style="margin-bottom: 0.5rem; color: #f59e0b; font-weight: bold;">Manual Review • Mismatched
+                        Data</div>
+                    <pre class="code-block">
 ### Instruction:
 Evaluate the unemployment benefit application risk.
 
 ### Input:
-{"structured_inputs": {"employment_status_declared": "unemployed", "income_verification": "pending_documents"}, "decision_context": {"case_age_days": 45, "caseworker_notes": "Applicant signature appears inconsistent with ID. Documents imply potential undisclosed income."}}
-</pre>
+{
+  "structured_inputs": {
+    "employment_status_declared": "unemployed",
+    "income_verification": "mismatch_detected",
+    "document_status": "flagged"
+  }
+}</pre>
+                </div>
             </div>
         </div>
 
@@ -310,10 +428,26 @@ Evaluate the unemployment benefit application risk.
                     <h4 style="color: #cbd5e1; margin-bottom: 0.5rem;">👤 Sara's Portal (HITL)</h4>
                     <p style="font-size: 0.9rem; color: #94a3b8;">The Portal listens for Inngest events and sends
                         approvals back via webhook.</p>
-                    <ul style="font-size: 0.9rem; color: #94a3b8; padding-left: 1.2rem;">
+                    <ul style="font-size: 0.9rem; color: #94a3b8; padding-left: 1.2rem; margin-bottom: 1rem;">
                         <li><strong>Listen:</strong> <code>atlas/tool.execution_requested</code></li>
                         <li><strong>Respond:</strong> <code>POST /webhook/approval</code></li>
                     </ul>
+
+                    <div style="background: #0f172a; padding: 1rem; border-radius: 6px; border: 1px solid #334155;">
+                        <div
+                            style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">
+                            Webhook Response Example</div>
+                        <pre
+                            style="margin: 0; font-size: 0.75rem; color: #cbd5e1; overflow-x: auto; white-space: pre-wrap;">
+<span style="color: #3b82f6;">curl</span> -X POST https://atlas-mcp-gateway-vercel.vercel.app/webhook/approval \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <span style="color: #f59e0b;">&lt;YOUR_API_KEY&gt;</span>" \
+  -d '{
+    "event_id": "<span style="color: #10b981;">evt_12345678</span>",
+    "decision": "APPROVED",
+    "notes": "Verified via phone call."
+  }'</pre>
+                    </div>
                 </div>
             </div>
 
@@ -415,14 +549,29 @@ Evaluate the unemployment benefit application risk.
         mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
     </script>
 
-    <div class="card">
-        <h2>Response Log</h2>
-        <div id="logs">// Waiting for action...</div>
-    </div>
+
     </div>
 
     <script>
         const BASE_URL = window.location.origin;
+
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+                tabcontent[i].classList.remove("active");
+            }
+            tablinks = document.getElementsByClassName("tab-btn");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            // Trigger reflow
+            void document.getElementById(tabName).offsetWidth;
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.className += " active";
+        }
 
         async function checkHealth() {
             try {
