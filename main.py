@@ -268,6 +268,27 @@ async def test_tool_endpoint(req: TestToolRequest):
     elif req.tool == "request_extension":
         result = await request_payment_extension_logic("test_user_123", "Tested via Console")
         return {"result": result}
+    elif req.tool == "approve_scenario":
+        return {
+            "result": "SIMULATED APPROVAL",
+            "risk_score": 0.1,
+            "decision": "Approved",
+            "reason": "Low risk factors. Employment: Unemployed, Income: Verified."
+        }
+    elif req.tool == "deny_scenario":
+        return {
+            "result": "SIMULATED DENIAL",
+            "risk_score": 0.9,
+            "decision": "Denied",
+            "reason": "High risk likelihood. Policy rule triggered: Income Threshold Exceeded."
+        }
+    elif req.tool == "escalate_scenario":
+        return {
+            "result": "SIMULATED ESCALATION",
+            "risk_score": 0.5,
+            "decision": "Manual Review",
+            "reason": "Inconsistent ID vs Signature. Document review required."
+        }
     else:
         raise HTTPException(status_code=400, detail="Unknown test scenario")
 

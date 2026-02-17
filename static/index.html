@@ -203,10 +203,55 @@
                 <select id="scenario">
                     <option value="check_payment">Check Payment Status (Low Risk)</option>
                     <option value="request_extension">Request Payment Extension (High Risk)</option>
+                    <option value="approve_scenario">Scenario: Approve (Low Risk)</option>
+                    <option value="deny_scenario">Scenario: Deny (High Income)</option>
+                    <option value="escalate_scenario">Scenario: Escalate (ID Mismatch)</option>
                 </select>
             </div>
 
             <button onclick="runTest()" id="test-btn">Run Test</button>
+        </div>
+
+        <div class="card" style="margin-bottom: 2rem;">
+            <h2>API Documentation & Usage</h2>
+            <p class="subtitle">You can test the Risk Engine using the console above, or by sending requests directly.
+            </p>
+
+            <div style="margin-top: 1.5rem;">
+                <h3>OLLAMA Scenario 1: Approve</h3>
+                <pre
+                    style="background: #1e293b; color: #cbd5e1; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.85rem;">
+### Instruction:
+Evaluate the unemployment benefit application risk.
+
+### Input:
+{"structured_inputs": {"employment_status_declared": "unemployed", "income_verification": "verified", "identity_check": "pass"}, "decision_context": {"case_age_days": 14, "risk_score_initial": 0.1}}
+</pre>
+            </div>
+
+            <div style="margin-top: 1.5rem;">
+                <h3>OLLAMA Scenario 2: Deny</h3>
+                <pre
+                    style="background: #1e293b; color: #cbd5e1; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.85rem;">
+### Instruction:
+Evaluate the unemployment benefit application risk.
+
+### Input:
+{"structured_inputs": {"employment_status_declared": "employed_full_time", "income_verification": "verified_high_income"}, "decision_context": {"case_age_days": 2, "policy_rule": "income_threshold_exceeded"}}
+</pre>
+            </div>
+
+            <div style="margin-top: 1.5rem;">
+                <h3>OLLAMA Scenario 3: Escalate</h3>
+                <pre
+                    style="background: #1e293b; color: #cbd5e1; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.85rem;">
+### Instruction:
+Evaluate the unemployment benefit application risk.
+
+### Input:
+{"structured_inputs": {"employment_status_declared": "unemployed", "income_verification": "pending_documents"}, "decision_context": {"case_age_days": 45, "caseworker_notes": "Applicant signature appears inconsistent with ID. Documents imply potential undisclosed income."}}
+</pre>
+            </div>
         </div>
 
         <div class="card">
