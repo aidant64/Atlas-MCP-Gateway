@@ -308,6 +308,24 @@
                 min-height: 300px;
             }
         }
+
+        /* Mermaid Tooltip Fix */
+        .mermaidTooltip {
+            position: fixed !important;
+            z-index: 10000 !important;
+            background-color: var(--card-bg) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--accent) !important;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            /* Position relative to mouse is handled by JS, but fixed prevents page shift */
+            left: auto !important;
+            top: auto !important;
+            /* Attempt to center bottom or follow mouse if Mermaid uses inline styles */
+        }
     </style>
 </head>
 
