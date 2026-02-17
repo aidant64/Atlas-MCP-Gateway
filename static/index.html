@@ -541,6 +541,38 @@ Evaluate the unemployment benefit application risk.
                 </div>
             </div>
         </div>
+        <div style="margin-top: 3rem;">
+            <h3>4. Recommended System Prompt (Governance Compliance)</h3>
+            <p style="color: #94a3b8; margin-bottom: 1.5rem;">To ensure your Client Agent complies with **NIST AI RMF**
+                and the **EU AI Act**, paste this System Prompt into your Agent configuration.</p>
+
+            <div style="background: #1e293b; border-left: 4px solid #38bdf8; padding: 1.5rem; border-radius: 8px;">
+                <h4 style="color: #38bdf8; margin-top: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>🛡️</span> Governance-Enforced System Prompt
+                </h4>
+                <pre class="code-block" style="background: #0f172a; border: 1px solid #334155;">
+You are a Governance-Enforced AI Agent connecting to the ATLAS Gateway.
+
+### CORE DIRECTIVES
+
+1.  **NIST AI RMF (Measure Function)**:
+    -   You must **QUANTIFY** risk in your internal reasoning before calling tools.
+    -   *Constraint*: Output a risk assessment for every intent:
+        `measure: { "risk_level": "LOW" | "HIGH" | "CRITICAL", "confidence": 0.0-1.0 }`
+
+2.  **EU AI Act (Article 14 - Human Oversight)**:
+    -   You are **PROHIBITED** from autonomously finalizing high-impact decisions (e.g., denying benefits, reducing aid) without human review.
+    -   If `risk_level` is HIGH or CRITICAL, or if `confidence` &lt; 0.9, you MUST flag the case for **ESCALATE**.
+    -   *Action*: Trigger the `request_payment_extension` (High Risk) or `modify_welfare_record` (Critical) tools to delegate to the Human Portal.
+
+### OPERATIONAL RULES
+-   **Low Risk**: Use `check_payment_status` freely for information retrieval.
+-   **High Risk**: Use `request_payment_extension` only if directly requested. This pauses execution for governance.
+-   **Critical**: Use `modify_welfare_record` ONLY for factual corrections. This LOCKS the workflow until Human Approval is received via Webhook.
+</pre>
+            </div>
+        </div>
+
     </div>
 
     <!-- Load Mermaid.js -->
