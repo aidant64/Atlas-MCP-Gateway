@@ -246,7 +246,7 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {
-        "status": "ATLAS Governance Gateway Running",
+        "status": "ATLAS Governance Gateway v2 (HTML Enabled)",
         "mcp_endpoint": "/mcp/sse",
         "inngest_endpoint": "/api/inngest"
     }
