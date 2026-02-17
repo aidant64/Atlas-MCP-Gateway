@@ -535,7 +535,7 @@ await fetch("<span style="color: #4ade80;">.../webhook/approval</span>", {
                     <h3>1. System Architecture</h3>
                     <div class="card"
                         style="height: 400px; display: flex; align-items: center; justify-content: center;">
-                        <div class="mermaid">
+                        <pre class="mermaid" style="background: transparent;">
                             graph TD
                             Agent[AI Agent]
                             Gateway{ATLAS Gateway}
@@ -548,7 +548,7 @@ await fetch("<span style="color: #4ade80;">.../webhook/approval</span>", {
                             Gateway -->|Trigger Event| Inngest
                             Inngest -.->|Wait for Approval| Human
                             Human -.->|Webhook Response| Inngest
-                        </div>
+                        </pre>
                     </div>
                 </div>
 
@@ -600,7 +600,8 @@ await fetch("<span style="color: #4ade80;">.../webhook/approval</span>", {
     <!-- Scripts -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+        mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
+        window.mermaid = mermaid;
     </script>
 
     <script>
@@ -620,6 +621,15 @@ await fetch("<span style="color: #4ade80;">.../webhook/approval</span>", {
                 navItem.classList.add('active');
             } else {
                 // Find by text if passed via button
+            }
+
+            // Explicitly render mermaid if switching to docs
+            if (viewName === 'docs' && window.mermaid) {
+                setTimeout(() => {
+                    window.mermaid.run({
+                        nodes: document.querySelectorAll('.mermaid')
+                    });
+                }, 100);
             }
         }
 
