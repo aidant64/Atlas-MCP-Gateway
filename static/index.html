@@ -260,121 +260,151 @@ Evaluate the unemployment benefit application risk.
         <h2>Integration Guide & MCP Schema</h2>
         <p class="subtitle">How to connect an AI Agent to the ATLAS Governance Gateway.</p>
 
-        <div style="margin-top: 1.5rem;">
-            <h3>1. Client Setup (Claude Desktop)</h3>
-            <p style="color: #cbd5e1; margin-bottom: 0.5rem;">To connect your AI Agent (e.g., Claude) to this Gateway,
-                add the following to your <code>claude_desktop_config.json</code>:</p>
-            <div
-                style="background: #0f172a; padding: 1rem; border-radius: 6px; overflow-x: auto; margin-bottom: 1.5rem;">
-                <pre style="margin: 0; font-size: 0.8rem; color: #cbd5e1;">
-{
-  "mcpServers": {
-    "atlas-gateway": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sse",
-        "--url", "https://atlas-mcp-gateway-vercel.vercel.app/mcp/sse",
-        "--header", "Authorization: Bearer &lt;YOUR_API_KEY&gt;"
-      ]
-    }
-  }
+        <style>
+            /* ... existing styles ... */
+            .grid-container {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 2rem;
+                margin-top: 2rem;
+            }
+
+            @media (max-width: 768px) {
+                .grid-container {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            .tool-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 1.5rem;
+                margin-top: 1rem;
+            }
+        </style>
+
+        <div class="grid-container">
+            <!-- Left Column: Setup Instructions -->
+            <div>
+                <h3>1. Client & Portal Setup</h3>
+
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: #cbd5e1; margin-bottom: 0.5rem;">🤖 AI Agent (Claude/Cursor)</h4>
+                    <p style="font-size: 0.9rem; color: #94a3b8;">Add this to <code>claude_desktop_config.json</code> to
+                        give your Agent access to these tools.</p>
+                    <div style="background: #0f172a; padding: 1rem; border-radius: 6px; overflow-x: auto;">
+                        <pre style="margin: 0; font-size: 0.75rem; color: #cbd5e1;">
+"atlas-gateway": {
+  "command": "npx",
+  "args": [
+    "-y",
+    "@modelcontextprotocol/server-sse",
+    "--url", "https://atlas-mcp-gateway-vercel.vercel.app/mcp/sse",
+    "--header", "Authorization: Bearer &lt;YOUR_KEY&gt;"
+  ]
 }</pre>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 style="color: #cbd5e1; margin-bottom: 0.5rem;">👤 Sara's Portal (HITL)</h4>
+                    <p style="font-size: 0.9rem; color: #94a3b8;">The Portal listens for Inngest events and sends
+                        approvals back via webhook.</p>
+                    <ul style="font-size: 0.9rem; color: #94a3b8; padding-left: 1.2rem;">
+                        <li><strong>Listen:</strong> <code>atlas/tool.execution_requested</code></li>
+                        <li><strong>Respond:</strong> <code>POST /webhook/approval</code></li>
+                    </ul>
+                </div>
             </div>
 
-            <h3>2. Connecting to Sarah's Portal (HITL)</h3>
-            <p style="color: #cbd5e1; margin-bottom: 0.5rem;">The <strong>Human-in-the-Loop (HITL)</strong> system
-                integrates via event-driven webhooks:</p>
-            <ul style="color: #94a3b8; margin-bottom: 1rem; list-style-type: none; padding-left: 0;">
-                <li style="margin-bottom: 0.5rem;">
-                    <span style="color: #f59e0b; font-weight: bold;">➡ Outbound:</span>
-                    The Gateway sends <code>atlas/tool.execution_requested</code> events to the running Inngest server.
-                    Sarah's Portal listens to these events to display pending tasks.
-                </li>
-                <li style="margin-bottom: 0.5rem;">
-                    <span style="color: #10b981; font-weight: bold;">⬅ Inbound:</span>
-                    When Sarah approves/rejects a task, her Portal must send a POST request to:
-                    <code
-                        style="display: block; background: #1e293b; padding: 0.5rem; margin-top: 0.25rem; border-radius: 4px;">https://atlas-mcp-gateway-vercel.vercel.app/webhook/approval</code>
-                    <span style="font-size: 0.8rem; opacity: 0.8;">(Payload:
-                        <code>{ "event_id": "...", "decision": "APPROVED" }</code>)</span>
-                </li>
-            </ul>
-        </div>
+            <!-- Right Column: Architecture Diagram -->
+            <div>
+                <h3>2. System Architecture</h3>
+                <div class="diagram-container"
+                    style="background: #1e293b00; padding: 0.5rem; border-radius: 6px; text-align: center; height: 100%;">
+                    <div class="mermaid">
+                        graph TD
+                        Agent([🤖 AI Agent])
+                        Gateway{ATLAS Gateway}
+                        Brain([🧠 Modal SLM])
+                        Inngest[⚡ Inngest Workflow]
+                        Human([👤 Sara's Portal])
 
-        <div style="margin-top: 1.5rem;">
-            <h3>3. Architecture & Data Flow</h3>
-            <div class="diagram-container"
-                style="background: #1e293b00; padding: 1rem; border-radius: 6px; overflow-x: auto; text-align: center;">
-                <!-- Mermaid Diagram -->
-                <div class="mermaid">
-                    graph LR
-                    Agent([🤖 AI Agent])
-                    Gateway{ATLAS Gateway}
-                    Brain([🧠 Modal SLM])
-                    Inngest[⚡ Inngest Workflow]
-                    Human([👤 Human Portal])
+                        Agent ==>|MCP Tools| Gateway
+                        Gateway -.->|1. Risk Check| Brain
+                        Gateway ==>|2. Trigger Event| Inngest
+                        Inngest -.->|3. Request Approval| Human
+                        Human ==x|4. Webhook Decision| Inngest
 
-                    Agent ==>|MCP / SSE| Gateway
-                    Gateway -.->|Risk Analysis| Brain
-                    Gateway ==>|Event Trigger| Inngest
-                    Inngest -.->|Approval Task| Human
-                    Human ==x|Decision| Inngest
-
-                    style Agent fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-                    style Gateway fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
-                    style Brain fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-                    style Inngest fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
-                    style Human fill:#ef4444,stroke:#b91c1c,stroke-width:2px,color:#fff
+                        style Agent fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+                        style Gateway fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
+                        style Brain fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+                        style Inngest fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+                        style Human fill:#ef4444,stroke:#b91c1c,stroke-width:2px,color:#fff
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div style="margin-top: 1.5rem;">
-            <h3>4. Available Tools (Schema)</h3>
+        <div style="margin-top: 3rem;">
+            <h3>3. Available Tools & Usage Context</h3>
+            <p style="color: #94a3b8; margin-bottom: 1.5rem;">These tools are exposed to the AI Agent via MCP. The Agent
+                calls them based on the user's conversation.</p>
 
-            <div class="tool-card" style="margin-bottom: 1rem; border-left: 4px solid #10b981; padding-left: 1rem;">
-                <h4 style="color: #10b981; margin-bottom: 0.25rem;">check_payment_status</h4>
-                <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">Retrieves payment history. <em>(Low Risk -
-                        Auto Approved)</em></p>
-                <pre
-                    style="background: #0f172a; padding: 0.75rem; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; margin-top: 0.5rem;">
+            <div class="tool-grid">
+                <!-- Tool 1 -->
+                <div class="tool-card"
+                    style="border-left: 4px solid #10b981; padding: 1.5rem; background: #1e293b; border-radius: 8px;">
+                    <h4 style="color: #10b981; margin-top: 0;">check_payment_status</h4>
+                    <p style="font-size: 0.85rem; color: #cbd5e1;"><strong>🔍 When to use:</strong> The Agent calls this
+                        when a user asks "Where is my payment?" or "Check my history".</p>
+                    <p style="font-size: 0.85rem; color: #94a3b8;">Because this is a <strong>READ</strong> operation,
+                        the Gateway auto-approves it (Low Risk).</p>
+                    <pre
+                        style="background: #0f172a; padding: 0.75rem; border-radius: 4px; font-size: 0.75rem; color: #cbd5e1; margin-top: 1rem;">
 {
   "name": "check_payment_status",
-  "arguments": {
-    "beneficiary_id": "string"
-  }
+  "arguments": { "beneficiary_id": "string" }
 }</pre>
-            </div>
+                </div>
 
-            <div class="tool-card" style="margin-bottom: 1rem; border-left: 4px solid #f59e0b; padding-left: 1rem;">
-                <h4 style="color: #f59e0b; margin-bottom: 0.25rem;">request_payment_extension</h4>
-                <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">Request a deadline extension. <em>(High Risk -
-                        Triggers Governance)</em></p>
-                <pre
-                    style="background: #0f172a; padding: 0.75rem; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; margin-top: 0.5rem;">
+                <!-- Tool 2 -->
+                <div class="tool-card"
+                    style="border-left: 4px solid #f59e0b; padding: 1.5rem; background: #1e293b; border-radius: 8px;">
+                    <h4 style="color: #f59e0b; margin-top: 0;">request_payment_extension</h4>
+                    <p style="font-size: 0.85rem; color: #cbd5e1;"><strong>⚠️ When to use:</strong> The Agent calls this
+                        if a user says "I can't pay on time" or "I need more time".</p>
+                    <p style="font-size: 0.85rem; color: #94a3b8;">This is a <strong>High Risk</strong> action. The
+                        Gateway will pause and trigger the Governance Workflow.</p>
+                    <pre
+                        style="background: #0f172a; padding: 0.75rem; border-radius: 4px; font-size: 0.75rem; color: #cbd5e1; margin-top: 1rem;">
 {
   "name": "request_payment_extension",
-  "arguments": {
-    "beneficiary_id": "string",
-    "reason": "string"
+  "arguments": { 
+    "beneficiary_id": "string", 
+    "reason": "string" 
   }
 }</pre>
-            </div>
+                </div>
 
-            <div class="tool-card" style="margin-bottom: 1rem; border-left: 4px solid #ef4444; padding-left: 1rem;">
-                <h4 style="color: #ef4444; margin-bottom: 0.25rem;">modify_welfare_record</h4>
-                <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">Update beneficiary details. <em>(Critical Risk
-                        - Requires Approval)</em></p>
-                <pre
-                    style="background: #0f172a; padding: 0.75rem; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; margin-top: 0.5rem;">
+                <!-- Tool 3 -->
+                <div class="tool-card"
+                    style="border-left: 4px solid #ef4444; padding: 1.5rem; background: #1e293b; border-radius: 8px;">
+                    <h4 style="color: #ef4444; margin-top: 0;">modify_welfare_record</h4>
+                    <p style="font-size: 0.85rem; color: #cbd5e1;"><strong>🚨 When to use:</strong> The Agent calls this
+                        to change sensitive data (e.g., "Update my income" or "Change address").</p>
+                    <p style="font-size: 0.85rem; color: #94a3b8;"><strong>Critical Risk:</strong> Always requires
+                        explicit Human Approval via Sara's Portal.</p>
+                    <pre
+                        style="background: #0f172a; padding: 0.75rem; border-radius: 4px; font-size: 0.75rem; color: #cbd5e1; margin-top: 1rem;">
 {
   "name": "modify_welfare_record",
-  "arguments": {
-    "beneficiary_id": "string",
-    "changes": "object"
+  "arguments": { 
+    "beneficiary_id": "string", 
+    "changes": "object" 
   }
 }</pre>
+                </div>
             </div>
         </div>
     </div>
