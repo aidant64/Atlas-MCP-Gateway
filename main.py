@@ -125,28 +125,50 @@ def format_prompt(intent: str, context: Dict[str, Any]) -> str:
 def call_slm_risk_engine(intent: str, context: Dict[str, Any]) -> Dict[str, Any]:
     """
     Calls the remote Modal.com SLM to evaluate risk.
-    Handles 'Cold Start' with a 10-second timeout.
+    Uses modal.Cls to call the Model.generate() method.
     """
     try:
         logger.info(f"Connecting to Modal SLM: atlas-welfare-v1...")
-        
-        # Look up the deployed Modal function
-        f = modal.Function.from_name("atlas-welfare-v1", "inference")
-        
-        # Format the prompt
+
+        # Connect to the deployed Modal class
+        Model = modal.Cls.from_name("atlas-welfare-v1", "Model")
+        model = Model()
+
+        # Format the prompt (Alpaca format — matches the model's training)
         prompt = format_prompt(intent, context)
-        
-        # Call the function with timeout
-        # The deployed function expects a JSON object matching CompletionRequest
-        request_payload = {
-            "prompt": prompt,
-            "max_tokens": 256,
-            "temperature": 0.1
-        }
-        
-        # Run remote inference
-        # modal functions are async, but .call() is synchronous blocking
-        # We use a 10s timeout to handle cold starts or failures
+
+        # Call with individual args: generate(prompt, max_tokens, temperature)
+        response_text = model.generate.remote(prompt, 256, 0.1)
+
+        # Parse risk score from model output
+        import re
+
+        risk_score = 0
+        score_match = re.search(r"(?:Risk\s*Score|Score)\s*[:\-]\s*(\d+)", response_text, re.IGNORECASE)
+        if score_match:
+            risk_score = min(int(score_match.group(1)), 100)
+
+        if risk_score == 0:
+            lower_text = response_text.lower()
+            if any(w in lower_text for w in ["block", "deny", "denied", "critical risk"]):
+                risk_score = 95
+            elif any(w in lower_text for w in ["high risk", "escalate", "manual review", "flag"]):
+                risk_score = 85
+            elif any(w in lower_text for w in ["medium risk", "moderate"]):
+                risk_score = 55
+            elif any(w in lower_text for w in ["low risk", "approve", "routine"]):
+                risk_score = 20
+
+        # Derive decision label
+        if risk_score >= 90:
+            decision = "BLOCK"
+        elif risk_score >= 70:
+            decision = "ESCALATE"
+        else:
+            decision = "ROUTINE"
+
+        rationale = response_text.strip()[:500]
+
         return {"decision": decision, "risk_score": risk_score, "rationale": rationale}
 
     except Exception as e:
