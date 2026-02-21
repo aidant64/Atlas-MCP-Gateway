@@ -146,24 +146,56 @@ def call_slm_risk_engine(intent: str, context: Dict[str, Any]) -> Dict[str, Any]
         
         # Run remote inference
         # modal functions are async, but .call() is synchronous blocking
-        # We use a 10s timeout to handle cold starts or failures
-        return {"decision": decision, "risk_score": risk_score, "rationale": rationale}
+        result = f.call(request_payload)
+        
+        response_text = result if isinstance(result, str) else result.get("generated_text", "")
+            
+        risk_score = 0
+        if "high risk" in response_text.lower() or "escalate" in response_text.lower():
+            risk_score = 85
+        else:
+            # Try to parse
+            import re
+            match = re.search(r"Risk Score:\s*(\d+)", response_text, re.IGNORECASE)
+            if match:
+                risk_score = int(match.group(1))
+
+        decision = "APPROVED" if risk_score < RISK_THRESHOLD else "MANUAL_REVIEW"
+        return {"decision": decision, "risk_score": risk_score, "rationale": response_text}
 
     except Exception as e:
         logger.error(f"Modal SLM Call Failed: {e}")
         # Fail safe -> Manual Review
         return {"decision": "MANUAL_REVIEW", "risk_score": 100, "rationale": f"System Error/Timeout: {str(e)}"}
+
 # --- Governance Logic (Inngest Powered) ---
+
+import asyncio
 
 async def governance_check(intent: str, context: Any, tool_name: str) -> str:
     """
-    Triggers an Inngest workflow for governance.
-    Returns "APPROVED" if low risk (auto-approved),
-    or "PENDING: <event_id>" if high risk (waiting for human).
+    Runs Modal SLM inline.
+    Returns JSON string with "APPROVED" if low risk (auto-approved),
+    or triggers Inngest workflow and returns "PENDING_REVIEW" if high risk (waiting for human).
     """
     event_id = f"evt_{uuid.uuid4().hex[:8]}"
     
-    # Send event to Inngest
+    # Run synchronous Modal call in a thread pool to avoid blocking the async event loop
+    risk_assessment = await asyncio.to_thread(call_slm_risk_engine, intent, context)
+    
+    risk_score = risk_assessment.get("risk_score", 100)
+    rationale = risk_assessment.get("rationale", "Unknown")
+    
+    if risk_score < RISK_THRESHOLD:
+        # LOW RISK -> Auto Approve
+        return json.dumps({
+            "status": "APPROVED",
+            "risk_score": risk_score,
+            "reason": rationale
+        }, indent=2)
+    
+    # HIGH RISK -> Trigger Inngest Workflow for Human Approval
+    # Send event to Inngest to handle the background waiting and webhook logic
     await inngest_client.send(
         inngest.Event(
             name="atlas/tool.execution_requested",
@@ -171,21 +203,18 @@ async def governance_check(intent: str, context: Any, tool_name: str) -> str:
                 "intent": intent,
                 "context": context,
                 "tool_name": tool_name,
-                "event_id": event_id
+                "event_id": event_id,
+                "pre_computed_risk": risk_assessment # Pass to avoid double SLM call
             },
             id=event_id
         )
     )
     
-    # For Phase 2, we assume a "Checking..." state.
-    # ideally, we would wait for the result if it's fast (low risk).
-    # But Inngest is async.
-    # To keep it simple: We tell the Agent to expect a delay.
-    # The Inngest workflow will log the final outcome.
-    
-    # We can do a quick pre-check or just return PENDING.
-    # Let's return a special string that the Agent knows how to handle.
-    return f"PENDING REVIEW (Ref: {event_id}). This action has been queued for execution subject to governance checks."
+    return json.dumps({
+        "status": "BLOCKED_PENDING_REVIEW",
+        "risk_score": risk_score,
+        "reason": f"{rationale}\n\nAction has been paused and sent to Sara's portal for approval. Ref: {event_id}"
+    }, indent=2)
 
 # --- Tool Definitions ---
 
